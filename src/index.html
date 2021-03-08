@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <!--
+          TODO:
+
+            display empty resultset message
+            dark mode
+            highlight matching text in resultset
+            highlight matching text in chapter view
+            implement work and book filters
+            clean up code
+
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+    <title>Seek</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <input id="search" placeholder="Search the scriptures..." />
+    </header>
+    <main>
+      <div class="results">
+        <section id="works"></section>
+        <section id="books"></section>
+        <div id="list"></div>
+        <div id="loading">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <aside>
+        <div class="header">
+          <h1></h1>
+          <div id="close"></div>
+        </div>
+        <div class="verses"></div>
+      </aside>
+    </main>
+    <template id="result">
+      <div class="verse">
+        <span class="relevance"></span>
+        <a class="ref" href="javascript:void(0)"></a>
+        <p class="text"></p>
+      </div>
+    </template>
+    <template id="verse">
+      <p>
+        <span class="num"></span>
+        <span class="text"></span>
+      </p>
+    </template>
+  </body>
+</html>

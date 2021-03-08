@@ -1,0 +1,114 @@
+html,body{
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+body{
+  display: flex;
+  flex-direction: column;
+}
+header,
+.results,
+aside{
+  padding: 24px;
+}
+header{
+  display: flex;
+  background: #f3f3f3;
+  box-shadow: 0 0 5px #888;
+}
+input{
+  flex: 1;
+  font-size: 24px;
+  padding: 12px;
+}
+main{
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  max-height: calc(100% - 104px);
+}
+#loading {
+  display: none;
+  justify-content: center;
+}
+.spinner{
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  background: rgb(63,249,220);
+  background: linear-gradient(0deg, rgba(64,164,220,0.1) 33%, rgba(64,164,220,1) 100%);
+  animation: spin .8s linear 0s infinite;
+}
+.spinner::before {
+  display: block;
+  content: '';
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+  border-radius: 50%;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0);
+  }
+  to{
+    transform: rotate(359deg);
+  }
+}
+.results{
+  flex: 1;
+  overflow: auto;
+}
+aside{
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  background: #f3f3f3;
+  overflow: auto;
+}
+aside .header{
+  display: flex;
+  align-items: center;
+}
+aside .header h1{
+  flex: 1;
+  margin: 6px 0;
+}
+aside .content{
+  flex: 1;
+  overflow: auto;
+}
+#close {
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+}
+#close::before,
+#close::after {
+  display: block;
+  content: '';
+  background-color: #888;
+  width: 24px;
+  height: 1px;
+  position: relative;
+  top: 11px;
+  transition: background-color .2s ease;
+}
+#close::before {
+  transform: rotate(45deg);
+}
+#close::after {
+  transform: rotate(-45deg);
+}
+#close:hover::before,
+#close:hover::after{
+  background-color: #000;
+}
+.relevance{
+  display: none;
+}

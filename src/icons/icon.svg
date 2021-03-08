@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  version="1.1"
+  viewBox="0 0 300 300">
+  <radialGradient id="cool">
+    <stop offset="0%" stop-color="#135791" />
+    <stop offset="100%" stop-color="#132761" />
+  </radialGradient>
+  <path fill="url(#cool)"
+        d="M 280 20
+           S 50 0 100 200
+           M 20 280
+           S 250 300 200 100
+           " />
+</svg>
