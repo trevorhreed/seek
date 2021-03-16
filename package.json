@@ -1,62 +1,22 @@
 {
   "name": "seek",
-  "productName": "seek",
-  "version": "0.6.0",
-  "description": "My Electron application description",
-  "main": "src/index.js",
+  "version": "1.0.0",
+  "description": "An application for searching the scriptures.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "help": "electron-forge help",
-    "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "license": "None",
-  "author": {
-    "name": "Trevor",
-    "email": "trevorhreed@gmail.com"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trevorhreed/seek.git"
   },
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "icon": "./src/icons/icon"
-      },
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "seek"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ]
-    }
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/trevorhreed/seek/issues"
   },
-  "dependencies": {
-    "electron-squirrel-startup": "^1.0.0"
-  },
-  "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.54",
-    "@electron-forge/maker-deb": "^6.0.0-beta.54",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
-    "@electron-forge/maker-zip": "^6.0.0-beta.54",
-    "electron": "12.0.0",
-    "electron-builder": "^22.10.5"
-  }
+  "homepage": "https://github.com/trevorhreed/seek#readme"
 }

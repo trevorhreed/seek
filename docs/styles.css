@@ -1,11 +1,24 @@
+:root{
+  --bg1: #333;
+  --bg2: #444;
+  --text: #ccc;
+  --link: #7bf;
+  --border: #555;
+}
+
 html,body{
   margin: 0;
   padding: 0;
   height: 100%;
+  background: var(--bg1);
+  color: var(--text);
 }
 body{
   display: flex;
   flex-direction: column;
+}
+a,a:visited{
+  color: var(--link);
 }
 header,
 .results,
@@ -14,13 +27,17 @@ aside{
 }
 header{
   display: flex;
-  background: #f3f3f3;
+  background: var(--bg2);
   box-shadow: 0 0 5px #888;
 }
 input{
   flex: 1;
   font-size: 24px;
   padding: 12px;
+  background: var(--bg1);
+  color: var(--text);
+  outline: none;
+  border: solid 1px var(--border);
 }
 main{
   flex: 1;
@@ -68,7 +85,7 @@ aside{
   flex: 1;
   display: none;
   flex-direction: column;
-  background: #f3f3f3;
+  background: var(--bg2);
   overflow: auto;
 }
 aside .header{
@@ -110,5 +127,5 @@ aside .content{
   background-color: #000;
 }
 .relevance{
-  display: none;
+
 }
