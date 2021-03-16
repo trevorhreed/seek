@@ -45,7 +45,7 @@
   const FULL_CONTAINS_MODIFIER = .7
   const PARTIAL_CONTAINS_MODIFIER = .3
   const seek = (term, arr) => {
-    term = term.toLowerCase()
+    term = term.replace(alphaOnlyRegex, '').toLowerCase()
     const terms = term.split(searchSplitRegex).filter(Boolean)
     const items = []
     arr.forEach(item => {
