@@ -1,0 +1,11 @@
+{
+  "name": "fragle",
+  "version": "0.1.0",
+  "description": "An attempt at a simple frontend framework.",
+  "type": "module",
+  "scripts": {
+    "start": "npx live-server .",
+    "build": "rollup src/core.js --file fragle.js --format iife --output.name Fragle",
+    "watch": "npx watch-cli -p 'src/**/*.js' -c 'npm run build'"
+  }
+}

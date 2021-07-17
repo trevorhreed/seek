@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Seek</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="elasticlunr.min.js"></script>
+    <script src="scripts.js"></script>
+  </head>
+  <body>
+    <header>
+      <section class="search">
+        <input type="search" name="search" placeholder="Search" />
+      </section>
+      <section class="works">
+        <div data-name="The Old Testament">The Old Testament</div>
+        <div data-name="The New Testament">The New Testament</div>
+        <div data-name="Book of Mormon">Book of Mormon</div>
+        <div data-name="Doctrine & Covenants">Doctrine & Covenants</div>
+        <div data-name="The Pearl of Great Price">Pearl of Great Price</div>
+      </section>
+    </header>
+    <main>
+      <section class="results">
+        <header>
+          <p class="status">No results.</p>
+        </header>
+        <div class="scroll-wrapper">
+          <div class="list"></div>
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+      <section class="chapter">
+        <header>
+          <h2></h2>
+          <span class="close-chapter"></span>
+        </header>
+        <div class="verses"></div>
+      </section>
+    </main>
+    <template id="result">
+      <div class="result">
+        <h3><span></span></h3>
+        <p></p>
+      </div>
+    </template>
+    <template id="verse">
+      <p>
+        <span class="num"></span>
+        <span class="text"></span>
+      </p>
+    </template>
+  </body>
+</html>

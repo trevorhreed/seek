@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      html,body{
+        background-color: #333;
+        color: #ddd;
+      }
+    </style>
+    <script src="./fragle.js"></script>
+  </head>
+  <body>
+    <main>
+      <app-banner></app-banner>
+    </main>
+    <script>
+      performance.mark('create')
+      const app = new Fragle()
+      app.inject('version', '0.1.0')
+      app.component({
+        selector: 'app-banner',
+        template: `
+          <h1 [style]="styles" (click)="greet">{{ name }} Hello, {{ name }}!</h1>
+          <app-info></app-info>
+          <div>
+            <span>Name: {{ person.name }}</span>
+            <span>Age: {{ person.age }}</span>
+          </div>
+          <div *for="item of items">
+            <span [style]="styles" (click)="greet">{{ item }}</span>
+          </div>
+        `,
+        main($scope) {
+          $scope.name = 'Trevor'
+          $scope.styles = 'color:green;'
+          $scope.greet = e => {
+            $scope.items = [
+              'one',
+              'two',
+              'three'
+            ]
+          }
+          $scope.person = {
+            name: 'Alice',
+            age: 33
+          }
+          $scope.items = [
+            'apple',
+            'banana',
+            'cherry'
+          ]
+        }
+      })
+      app.component({
+        selector: 'app-info',
+        template: `
+         Version {{ version }}
+        `,
+        main($scope, version) {
+          $scope.version = version
+        }
+      })
+      performance.mark('init')
+      app.initialize('main')
+      performance.mark('ready')
+      performance.measure('Startup:', 'create', 'ready')
+      performance.measure('Initialization:', 'init', 'ready')
+      performance.measure('Total Load Time:')
+      const entries = performance.getEntriesByType('measure')
+      entries.forEach(entry => {
+        console.log(entry.name, entry.duration)
+      })
+      console.log(performance.getEntriesByType('measure'))
+      performance.clearMarks()
+      performance.clearMeasures()
+    </script>
+  </body>
+</html>

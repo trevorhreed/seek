@@ -1,0 +1,269 @@
+html,body{
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-size: 16px;
+  font-family: Helvetica, Arial, sans-serif;
+  height: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+html{
+  background: #444;
+}
+body{
+  display: flex;
+  flex-direction: column;
+  max-width: 1024px;
+  margin: 0 auto;
+  ::selection{
+    background: #abc;
+    color: #000;
+  }
+}
+body,
+input,
+textarea{
+  background: #333;
+  color: #777;
+}
+button{
+  background: #222;
+  border: 0;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 18px;
+  outline: 0;
+  padding: 8px 16px;
+  &:hover{
+    background: #272727;
+  }
+}
+input{
+  background: #222;
+  border: 0;
+  font-size: 24px;
+  outline: 0;
+  padding: .6em;
+  width: 100%;
+}
+h1,h2,h3{
+  color: #bbb;
+  font-weight: 100;
+  margin-top: 0;
+}
+h2{
+  font-size: 2em;
+}
+.works{
+  display: flex;
+  justify-content: flex-start;
+  padding: 12px 12px 16px;
+  overflow: auto;
+  border-bottom: solid 1px #555;
+  div:not(:last-child){
+    margin-right: 12px;
+  }
+  div{
+    flex: 0 0 80px;
+    border: solid 1px #777;
+    padding: 12px;
+    text-align: center;
+    width: 100px;
+    min-width: 100px;
+    user-select: none;
+    cursor: pointer;
+    &.selected{
+      background: #444;
+    }
+    &:hover{
+      background: #555;
+    }
+  }
+}
+
+main{
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+main > section{
+  flex: 1;
+  padding: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.results{
+  .status{
+    font-size: 80%;
+    margin-top: 0;
+  }
+  .scroll-wrapper{
+    flex: 1;
+    overflow: auto;
+  }
+  .list{
+    line-height: 1.7em;
+    cursor: pointer;
+    .result{
+      /*
+      padding-left: 4px;
+      margin-left: -4px;
+      border-left: solid 1px transparent;
+      */
+      &:focus{
+        outline: none;
+        /*
+        border-left-color: #bb4;
+        */
+        & h3 span{
+          position: relative;
+          &::after{
+            content: '';
+            display: block;
+            background: red;
+            position: absolute;
+            top: 8px;
+            right: -20px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+          }
+        }
+      }
+    }
+    &:first-child h3{
+      margin-top: 0;
+    }
+    h3{
+      margin-bottom: 0;
+    }
+    p{
+      margin-top: 0;
+      font-size: 18px;
+      .highlight{
+        color: #bb4;
+      }
+    }
+  }
+}
+
+.chapter{
+  background: #333;
+  bottom: 0;
+  box-sizing: border-box;
+  flex: auto;
+  left: 0;
+  line-height: 1.7em;
+  margin-left: 100%;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: margin-left .2s ease;
+  width: 100%;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  &.open{
+    margin-left: 0;
+  }
+  header{
+    display: flex;
+  }
+  h2{
+    flex: 1;
+  }
+  .verses{
+    flex: 1;
+    overflow: auto;
+  }
+  p{
+    font-size: 18px;
+    &.highlight{
+      background: #443;
+      color: #aaa;
+    }
+  }
+  .num{
+    color: #bbb;
+  }
+  .close-chapter{
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    &::before,
+    &::after {
+      display: block;
+      content: '';
+      background-color: #888;
+      width: 24px;
+      height: 1px;
+      position: relative;
+      top: 11px;
+      transition: background-color .2s ease;
+    }
+    &::before {
+      transform: rotate(45deg);
+    }
+    &::after {
+      transform: rotate(-45deg);
+    }
+    &:hover::before,
+    &:hover::after{
+      background-color: #ddd;
+    }
+  }
+}
+
+.loading{
+ display: none;
+ justify-content: center;
+}
+.spinner{
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  background: rgb(63,249,220);
+  background: linear-gradient(0deg, rgba(64,164,220,0.1) 33%, rgba(64,164,220,1) 100%);
+  animation: spin .8s linear 0s infinite;
+}
+.spinner::before {
+  display: block;
+  content: '';
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0);
+  border-radius: 50%;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0);
+  }
+  to{
+    transform: rotate(359deg);
+  }
+}
+
+
+@media (min-width: 703px) {
+  .works{
+    justify-content: center;
+  }
+  .chapter{
+    flex: 1;
+    position: initial;
+    width: auto;
+    border-left: solid 1px #555;
+    margin-left: 0;
+    display: none;
+    &.open{
+      display: flex;
+    }
+  }
+}

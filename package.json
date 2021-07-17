@@ -1,25 +1,36 @@
 {
   "name": "seek",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "An application for searching the scriptures.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "start": "npx live-server docs"
+    "start": "npm run watch & npx live-server docs",
+    "build": "htmlc ./src/index.html ./docs/index.html",
+    "watch": "htmlc ./src/index.html ./docs/index.html watch"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/trevorhreed/seek.git"
   },
-  "author": "",
+  "author": "Trevor Reed",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/trevorhreed/seek/issues"
   },
   "homepage": "https://github.com/trevorhreed/seek#readme",
-  "dependencies": {
-    "lunr": "^2.3.9"
+  "devDependencies": {
+    "chokidar": "^3.5.2",
+    "cssnano": "^5.0.6",
+    "elasticlunr": "^0.9.5",
+    "html-minifier": "^3.5.21",
+    "htmlc": "file:build",
+    "jsdom": "^16.6.0",
+    "mkdirp": "^1.0.4",
+    "postcss": "^8.3.5",
+    "postcss-nested": "^5.0.5",
+    "terser": "^5.7.1"
   }
 }

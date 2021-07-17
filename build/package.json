@@ -1,0 +1,8 @@
+{
+  "name": "htmlc",
+  "version": "0.1.0",
+  "main": "index.js",
+  "bin": {
+    "htmlc": "index.js"
+  }
+}
