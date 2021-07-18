@@ -6,6 +6,106 @@ document.addEventListener('DOMContentLoaded', async e => {
   const index = elasticlunr.Index.load(data)
   const versesArr = Object.keys(verses).map(x => verses[x])
 
+  const linkInfo = {
+    baseUrl: 'https://www.churchofjesuschrist.org/study/scriptures',
+    workMap: {
+      'The Old Testament': 'ot',
+      'The New Testament': 'nt',
+      'Book of Mormon': 'bofm',
+      'Doctrine & Covenants': 'dc-testament',
+      'The Pearl of Great Price': 'pgp'
+    },
+    bookMap: {
+      '1 Nephi': '1-ne',
+      '2 Nephi': '2-ne',
+      'Jacob': 'jacob',
+      'Enos': 'enos',
+      'Jarom': 'jarom',
+      'Omni': 'omni',
+      'Words of Mormon': 'w-of-m',
+      'Mosiah': 'mosiah',
+      'Alma': 'alma',
+      'Helaman': 'hel',
+      '3 Nephi': '3-ne',
+      '4 Nephi': '4-ne',
+      'Mormon': 'morm',
+      'Ether': 'ether',
+      'Moroni': 'moro',
+      'D&C': 'dc',
+      'Genesis': 'gen',
+      'Exodus': 'ex',
+      'Leviticus': 'lev',
+      'Numbers': 'num',
+      'Deuteronomy': 'deut',
+      'Joshua': 'josh',
+      'Judges': 'judg',
+      'Ruth': 'ruth',
+      '1 Samuel': '1-sam',
+      '2 Samuel': '2-sam',
+      '1 Kings': '1-kgs',
+      '2 Kings': '2-kgs',
+      '1 Chronicles': '1-chr',
+      '2 Chronicles': '2-chr',
+      'Ezra': 'ezra',
+      'Nehemiah': 'neh',
+      'Esther': 'esth',
+      'Job': 'job',
+      'Psalms': 'ps',
+      'Proverbs': 'prov',
+      'Ecclesiastes': 'eccl',
+      'Solomon\'s Song': 'song',
+      'Isaiah': 'isa',
+      'Jeremiah': 'jer',
+      'Lamentations': 'lam',
+      'Ezekiel': 'ezek',
+      'Daniel': 'dan',
+      'Hosea': 'hosea',
+      'Joel': 'joel',
+      'Amos': 'amos',
+      'Obadiah': 'obad',
+      'Jonah': 'jonah',
+      'Micah': 'micah',
+      'Nahum': 'nahum',
+      'Habakkuk': 'hab',
+      'Zephaniah': 'zeph',
+      'Haggai': 'hag',
+      'Zechariah': 'zech',
+      'Malachi': 'mal',
+      'Matthew': 'matt',
+      'Mark': 'mark',
+      'Luke': 'luke',
+      'John': 'john',
+      'Acts': 'acts',
+      'Romans': 'rom',
+      '1 Corinthians': '1-cor',
+      '2 Corinthians': '2-cor',
+      'Galatians': 'gal',
+      'Ephesians': 'eph',
+      'Philippians': 'philip',
+      'Colossians': 'col',
+      '1 Thessalonians': '1-thes',
+      '2 Thessalonians': '2-thes',
+      '1 Timothy': '1-tim',
+      '2 Timothy': '2-tim',
+      'Titus': 'titus',
+      'Philemon': 'philem',
+      'Hebrews': 'heb',
+      'James': 'james',
+      '1 Peter': '1-pet',
+      '2 Peter': '2-pet',
+      '1 John': '1-jn',
+      '2 John': '2-jn',
+      '3 John': '3-jn',
+      'Jude': 'jude',
+      'Revelation': 'rev',
+      'Moses': 'moses',
+      'Abraham': 'abr',
+      'Joseph Smith—Matthew': 'js-m',
+      'Joseph Smith—History': 'js-h',
+      'Articles of Faith': 'a-of-f'
+    }
+  }
+
   let queryTokens = []
   let references = []
   let selectedWork
@@ -92,6 +192,9 @@ document.addEventListener('DOMContentLoaded', async e => {
       text = text.replace(re, m => `<span class="highlight">${m}</span>`)
     })
     template.querySelector('p').innerHTML = text
+    const anchor = template.querySelector('a')
+    anchor.href = `${linkInfo.baseUrl}/${linkInfo.workMap[result.work]}/${linkInfo.bookMap[result.book]}/${result.chapter}.${result.verse}#${result.verse},`
+    anchor.target = '_blank'
     template.dataset.work = result.work
     template.dataset.book = result.book
     template.dataset.chapter = result.chapter
@@ -161,6 +264,7 @@ document.addEventListener('DOMContentLoaded', async e => {
   //
 
   function onResultClick(e) {
+    if (e.target.tagName === 'A') return
     const result = e.target.closest('.result')
     const { work, book, chapter, verse } = result.dataset
     showChapter({ work, book, chapter, selectedVerse: verse })

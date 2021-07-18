@@ -23,6 +23,14 @@ const generate = async () => {
   ])
 }
 
-if (module === require.main) {
-  generate()
-}
+// if (module === require.main) {
+//   generate()
+// }
+
+const data = require('./verses.json')
+const books = {}
+data.forEach(datum => {
+  books[datum.book] = ''
+})
+
+write('./books.json', JSON.stringify(books, null, 2))
