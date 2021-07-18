@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async e => {
     resultTemplate,
     verseTemplate
   ] = querySelector(
-    '.search input',
+    '.search',
     'main',
     ['.works div'],
     '.results',

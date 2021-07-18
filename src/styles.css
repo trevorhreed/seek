@@ -1,3 +1,45 @@
+:root{
+  --space: #444;
+  --back: #333;
+  --text: #999;
+  --header-text: #ccc;
+  --search-back: #222;
+  --line: #555;
+  --toggle-selected-back: #444;
+  --toggle-hover-back: #555;
+  --selection-back: #abc;
+  --selection-text: #000;
+  --focus: #f55;
+  --results-highlight-back: #bb4;
+  --verse-highlight-back: #553;
+  --verse-highlight-text: #bbb;
+  --verse-num: #ccc;
+  --close-color: #888;
+  --close-hover-color: #ddd;
+}
+
+@media (prefers-color-scheme: light) {
+  :root{
+    --space: #ddd;
+    --back: #fff;
+    --text: #777;
+    --header-text: #111;
+    --search-back: #eee;
+    --line: #ddd;
+    --toggle-selected-back: #444;
+    --toggle-hover-back: #555;
+    --selection-back: #def;
+    --selection-text: #777;
+    --focus: #f55;
+    --results-highlight-back: #aa0;
+    --verse-highlight-back: #ffb;
+    --verse-highlight-text: #777;
+    --verse-num: #777;
+    --close-color: #888;
+    --close-hover-color: #222;
+  }
+}
+
 html,body{
   margin: 0;
   padding: 0;
@@ -9,7 +51,7 @@ html,body{
   overflow: hidden;
 }
 html{
-  background: #444;
+  background: var(--space);
 }
 body{
   display: flex;
@@ -17,30 +59,18 @@ body{
   max-width: 1024px;
   margin: 0 auto;
   ::selection{
-    background: #abc;
-    color: #000;
+    background: var(--selection-back);
+    color: var(--selection-text);
   }
 }
 body,
 input,
 textarea{
-  background: #333;
-  color: #777;
+  background: var(--back);
+  color: var(--text);
 }
-button{
-  background: #222;
-  border: 0;
-  color: #ddd;
-  cursor: pointer;
-  font-size: 18px;
-  outline: 0;
-  padding: 8px 16px;
-  &:hover{
-    background: #272727;
-  }
-}
-input{
-  background: #222;
+.search{
+  background: var(--search-back);
   border: 0;
   font-size: 24px;
   outline: 0;
@@ -48,7 +78,7 @@ input{
   width: 100%;
 }
 h1,h2,h3{
-  color: #bbb;
+  color: var(--header-text);
   font-weight: 100;
   margin-top: 0;
 }
@@ -60,13 +90,13 @@ h2{
   justify-content: flex-start;
   padding: 12px 12px 16px;
   overflow: auto;
-  border-bottom: solid 1px #555;
+  border-bottom: solid 1px var(--line);
   div:not(:last-child){
     margin-right: 12px;
   }
   div{
     flex: 0 0 80px;
-    border: solid 1px #777;
+    border: solid 1px var(--line);
     padding: 12px;
     text-align: center;
     width: 100px;
@@ -74,10 +104,10 @@ h2{
     user-select: none;
     cursor: pointer;
     &.selected{
-      background: #444;
+      background: var(--toggle-selected-back);
     }
     &:hover{
-      background: #555;
+      background: var(--toggle-hover-back);
     }
   }
 }
@@ -108,22 +138,14 @@ main > section{
     line-height: 1.7em;
     cursor: pointer;
     .result{
-      /*
-      padding-left: 4px;
-      margin-left: -4px;
-      border-left: solid 1px transparent;
-      */
       &:focus{
         outline: none;
-        /*
-        border-left-color: #bb4;
-        */
         & h3 span{
           position: relative;
           &::after{
             content: '';
             display: block;
-            background: red;
+            background: var(--focus);
             position: absolute;
             top: 8px;
             right: -20px;
@@ -144,14 +166,14 @@ main > section{
       margin-top: 0;
       font-size: 18px;
       .highlight{
-        color: #bb4;
+        color: var(--results-highlight-back);
       }
     }
   }
 }
 
 .chapter{
-  background: #333;
+  background: var(--back);
   bottom: 0;
   box-sizing: border-box;
   flex: auto;
@@ -182,12 +204,12 @@ main > section{
   p{
     font-size: 18px;
     &.highlight{
-      background: #443;
-      color: #aaa;
+      background: var(--verse-highlight-back);
+      color: var(--verse-highlight-text);
     }
   }
   .num{
-    color: #bbb;
+    color: var(--verse-num);
   }
   .close-chapter{
     cursor: pointer;
@@ -197,7 +219,7 @@ main > section{
     &::after {
       display: block;
       content: '';
-      background-color: #888;
+      background-color: var(--close-color);
       width: 24px;
       height: 1px;
       position: relative;
@@ -212,7 +234,7 @@ main > section{
     }
     &:hover::before,
     &:hover::after{
-      background-color: #ddd;
+      background-color: var(--close-hover-color);
     }
   }
 }
@@ -259,7 +281,7 @@ main > section{
     flex: 1;
     position: initial;
     width: auto;
-    border-left: solid 1px #555;
+    border-left: solid 1px var(--line);
     margin-left: 0;
     display: none;
     &.open{
