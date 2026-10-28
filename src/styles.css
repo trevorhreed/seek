@@ -184,7 +184,9 @@ kbd {
 }
 .searchbox input::placeholder { color: var(--ink-3); }
 .searchbox input::-webkit-search-cancel-button { cursor: pointer; }
-.searchbox:focus-within kbd { display: none; }
+/* Hide the / hint while typing or once there's text, so the clear button never shifts under the cursor. */
+.searchbox:focus-within kbd { visibility: hidden; }
+.searchbox:has(input:not(:placeholder-shown)) kbd { display: none; }
 
 .icon-button {
   flex: none;
