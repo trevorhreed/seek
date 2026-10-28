@@ -252,6 +252,16 @@ const highlight = (text, matched) => {
 
 // ---- Scope chips -------------------------------------------------------------------------------------------
 
+const scopebar = document.querySelector('.scopebar')
+// Switches the volume chips to short names (OT, NT…) when the full names would wrap the filter row, e.g. once
+// match counts are added to each chip.
+const fitScopebar = () => {
+  scopebar.classList.remove('compact')
+  const first = scopebar.querySelector('.chip')
+  if (first && scopebar.lastElementChild.offsetTop > first.offsetTop) scopebar.classList.add('compact')
+}
+window.addEventListener('resize', fitScopebar)
+
 const renderWorkChips = () => {
   ui.workChips.replaceChildren(...canon.works.map(work => {
     const count = state.counts?.[work.id]
@@ -270,6 +280,7 @@ const renderWorkChips = () => {
     chip.addEventListener('click', () => toggleScope(work.id))
     return chip
   }))
+  fitScopebar()
 }
 
 const renderCustomChips = () => {
@@ -290,6 +301,7 @@ const renderCustomChips = () => {
     chip.addEventListener('click', () => toggleScope(key))
     return chip
   }))
+  fitScopebar()
 }
 
 const toggleScope = key => {

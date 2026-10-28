@@ -254,6 +254,8 @@ kbd {
 .chip-add { border-style: dashed; }
 .chip-add svg { width: 15px; height: 15px; }
 .chip-label-short { display: none; }
+.scopebar.compact .chip-label-long { display: none; }
+.scopebar.compact .chip-label-short { display: inline; }
 
 /* ---- Layout ----------------------------------------------------------------------------------------------- */
 
