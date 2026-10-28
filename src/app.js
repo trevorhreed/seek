@@ -253,14 +253,49 @@ const highlight = (text, matched) => {
 // ---- Scope chips -------------------------------------------------------------------------------------------
 
 const scopebar = document.querySelector('.scopebar')
-// Switches the volume chips to short names (OT, NT…) when the full names would wrap the filter row, e.g. once
-// match counts are added to each chip.
+// Switches the volume chips to short names (OT, NT…) when the full names don't fit the filter row, e.g. once
+// match counts are added to each chip; past that the row scrolls sideways, with faded edges as the hint.
 const fitScopebar = () => {
   scopebar.classList.remove('compact')
-  const first = scopebar.querySelector('.chip')
-  if (first && scopebar.lastElementChild.offsetTop > first.offsetTop) scopebar.classList.add('compact')
+  const overflows = () => scopebar.scrollWidth > scopebar.clientWidth
+  scopebar.classList.toggle('compact', overflows())
+  scopebar.classList.toggle('overflowing', overflows())
 }
 window.addEventListener('resize', fitScopebar)
+
+// ---- Tooltips ----------------------------------------------------------------------------------------------
+
+const TOOLTIP_DELAY_MS = 350
+const TOOLTIP_GAP = 8
+const tooltip = el('div', { className: 'tooltip', role: 'tooltip' })
+document.body.append(tooltip)
+let tooltipTimer
+
+const showTooltip = target => {
+  tooltip.textContent = target.dataset.tip
+  const rect = target.getBoundingClientRect()
+  const left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2
+  tooltip.style.left = `${Math.max(TOOLTIP_GAP, Math.min(left, innerWidth - tooltip.offsetWidth - TOOLTIP_GAP))}px`
+  tooltip.style.top = `${rect.bottom + TOOLTIP_GAP}px`
+  tooltip.classList.add('visible')
+}
+
+const hideTooltip = () => {
+  clearTimeout(tooltipTimer)
+  tooltip.classList.remove('visible')
+}
+
+document.addEventListener('pointerover', event => {
+  const target = event.target.closest?.('[data-tip]')
+  hideTooltip()
+  if (target && event.pointerType === 'mouse') tooltipTimer = setTimeout(() => showTooltip(target), TOOLTIP_DELAY_MS)
+})
+document.addEventListener('focusin', event => {
+  if (event.target.matches('[data-tip]:focus-visible')) showTooltip(event.target)
+})
+document.addEventListener('focusout', hideTooltip)
+document.addEventListener('pointerdown', hideTooltip)
+scopebar.addEventListener('scroll', hideTooltip, { passive: true })
 
 const renderWorkChips = () => {
   ui.workChips.replaceChildren(...canon.works.map(work => {
