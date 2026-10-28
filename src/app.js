@@ -265,18 +265,21 @@ window.addEventListener('resize', fitScopebar)
 const renderWorkChips = () => {
   ui.workChips.replaceChildren(...canon.works.map(work => {
     const count = state.counts?.[work.id]
+    const selected = state.scope.has(work.id)
+    const matches = count === undefined ? '' : ` · ${formatNumber(count)} ${count === 1 ? 'match' : 'matches'}`
     const chip = el('button', {
       type: 'button',
       className: 'chip',
-      title: work.name
+      ariaLabel: `${work.name}${matches}`
     },
     el('span', { className: 'swatch' }),
     el('span', { className: 'chip-label-long', textContent: work.name }),
     el('span', { className: 'chip-label-short', textContent: work.short }),
     count === undefined ? null : el('span', { className: 'count', textContent: formatNumber(count) }))
     chip.dataset.work = work.id
+    chip.dataset.tip = `${work.name}${matches}\n${selected ? 'Click to stop filtering' : 'Click to search only here'}`
     if (count === 0) chip.dataset.empty = ''
-    chip.setAttribute('aria-pressed', state.scope.has(work.id))
+    chip.setAttribute('aria-pressed', selected)
     chip.addEventListener('click', () => toggleScope(work.id))
     return chip
   }))
@@ -290,11 +293,12 @@ const renderCustomChips = () => {
     const chip = el('button', {
       type: 'button',
       className: 'chip chip-removable',
-      title: `Remove ${scopes.labelFor(key)}`
+      ariaLabel: `Remove ${scopes.labelFor(key)} filter`
     },
     el('span', { className: 'swatch' }),
     el('span', { textContent: scopes.labelFor(key) }),
     el('span', { className: 'chip-x', 'aria-hidden': true, textContent: '×' }))
+    chip.dataset.tip = `${book ? `${book.name} (${book.work.name})` : scopes.labelFor(key)}\nClick to remove`
     if (book) chip.dataset.work = book.work.id
     else chip.dataset.collection = ''
     chip.setAttribute('aria-pressed', 'true')

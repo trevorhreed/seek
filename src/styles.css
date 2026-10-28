@@ -252,6 +252,37 @@ kbd {
 }
 .chip[data-empty]:not([aria-pressed="true"]) { opacity: .55; }
 .chip[aria-pressed="true"] .count { background: color-mix(in srgb, var(--work) 22%, var(--surface)); }
+/* Tooltips for filter chips, shown after a short hover delay; native titles are too slow and easy to miss. */
+.chip[data-tip] { position: relative; }
+.chip[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: 240px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: .78rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre-line;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity .12s, transform .12s;
+}
+.chip[data-tip]:hover::after, .chip[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: .35s;
+}
+@media (hover: none) { .chip[data-tip]::after { display: none; } }
 .chip-x { margin-right: -3px; color: var(--ink-3); font-size: 1.1rem; line-height: 1; }
 .chip-add { border-style: dashed; }
 .chip-add svg { width: 15px; height: 15px; }
