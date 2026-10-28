@@ -1,5 +1,5 @@
 import { createCanon } from './lib/canon.js'
-import { createReferenceParser } from './lib/reference.js'
+import { createReferenceFinder } from './lib/reference.js'
 import { createScopes } from './lib/scope.js'
 import { forEachWord, stem } from './lib/search.js'
 
@@ -87,7 +87,7 @@ const json = await fetch(DATA_URL).then(response => {
 const data = JSON.parse(json)
 const canon = createCanon(data)
 const scopes = createScopes(canon)
-const parseReference = createReferenceParser(canon)
+const findReferences = createReferenceFinder(canon)
 
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' })
 worker.postMessage({ type: 'init', json })
@@ -278,18 +278,37 @@ ui.picker.addEventListener('click', event => {
 
 // ---- Results -----------------------------------------------------------------------------------------------
 
-const resultItem = (verseId, index) => {
-  const { book, work, chapter, verse } = canon.locate(verseId)
+// An entry is a verse id, or a { start, end } passage when listing candidate references.
+const resultItem = (entry, index) => {
+  const start = typeof entry === 'number' ? entry : entry.start
+  const end = typeof entry === 'number' ? start + 1 : entry.end
+  const { book, work, chapter, verse } = canon.locate(start)
+  const last = canon.locate(end - 1)
+  const link = el('a', {
+    className: 'result-link',
+    href: end - start === 1 || last.chapter === chapter
+      ? canon.studyUrl(book, chapter, verse, last.verse)
+      : canon.studyUrl(book, chapter),
+    target: '_blank',
+    rel: 'noopener',
+    title: 'Open on churchofjesuschrist.org',
+    ariaLabel: `Open ${canon.rangeLabel(start, end)} on churchofjesuschrist.org`,
+    tabIndex: -1
+  })
+  link.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>'
+  const text = end - start === 1 ? data.text[start] : `${data.text[start]} …`
   const item = el('li', { className: 'result', tabIndex: 0 },
     el('div', { className: 'result-meta' },
       el('span', { className: 'swatch' }),
-      el('span', { className: 'result-ref', textContent: `${book.name} ${chapter}:${verse}` }),
-      el('span', { className: 'result-work', textContent: work.short })),
-    el('p', { className: 'result-text' }, highlight(data.text[verseId], state.matched)))
+      el('span', { className: 'result-ref', textContent: canon.rangeLabel(start, end) }),
+      el('span', { className: 'result-work', textContent: work.short }),
+      link),
+    el('p', { className: 'result-text' }, highlight(text, state.matched)))
   item.dataset.work = work.id
-  item.dataset.id = verseId
+  item.dataset.id = start
+  if (end - start > 1) item.dataset.end = end
   item.dataset.index = index
-  if (state.reader?.id === verseId) item.classList.add('active')
+  if (state.reader?.id === start) item.classList.add('active')
   return item
 }
 
@@ -350,7 +369,7 @@ const showBrowse = () => {
         el('h3', { textContent: collection.name }),
         el('div', { className: 'passage-list' }, ...collection.ranges.map(([start, end]) => {
           const from = canon.locate(start)
-          const button = el('button', { type: 'button', textContent: rangeLabel(start, end) })
+          const button = el('button', { type: 'button', textContent: canon.rangeLabel(start, end) })
           button.addEventListener('click', () => openReader(from.book, from.chapter, from.verse, end - 1))
           return button
         })))]
@@ -360,27 +379,29 @@ const showBrowse = () => {
   ui.results.append(...groups)
 }
 
-const rangeLabel = (start, end) => {
+// Opens a passage: a whole chapter opens at the top, anything narrower opens with those verses selected.
+const openPassage = ({ start, end }) => {
   const from = canon.locate(start)
-  const to = canon.locate(end - 1)
-  if (start === from.book.start && end === from.book.end) return from.book.name
-  const head = `${from.book.name} ${from.chapter}`
-  const wholeChapters = from.verse === 1 && end === canon.chapterRange(to.book, to.chapter)[1]
-  if (wholeChapters) return from.chapter === to.chapter ? head : `${head}–${to.chapter}`
-  if (from.chapter === to.chapter) return from.verse === to.verse ? `${head}:${from.verse}` : `${head}:${from.verse}–${to.verse}`
-  return `${head}:${from.verse}–${to.chapter}:${to.verse}`
+  const wholeChapter = from.verse === 1 && end === canon.chapterRange(from.book, from.chapter)[1]
+  openReader(from.book, from.chapter, wholeChapter ? null : from.verse, end - 1)
 }
 
-const showReference = ({ book, start, end }) => {
+// One reference lists its verses; an ambiguous shortcut ("ne222") lists each passage it could mean.
+const showReferences = references => {
   state.counts = null
   state.matched = new Set()
   renderWorkChips()
+  const [first] = references
+  const go = el('button', { type: 'button', className: 'link-button', textContent: `Open ${canon.rangeLabel(first.start, first.end)}` })
+  go.addEventListener('click', () => openPassage(first))
+  const hint = el('span', { className: 'hint', textContent: ' or press Enter' })
+  if (references.length > 1) {
+    setResults(references, [go, hint, el('span', { className: 'hint', textContent: ` · ${references.length} possible references` })])
+    return
+  }
   const ids = []
-  for (let id = start; id < end && ids.length < MAX_REFERENCE_VERSES; id++) ids.push(id)
-  const go = el('button', { type: 'button', className: 'link-button', textContent: `Open ${rangeLabel(start, end)}` })
-  const from = canon.locate(start)
-  go.addEventListener('click', () => openReader(book, from.chapter, from.verse, end - 1))
-  setResults(ids, [go, el('span', { className: 'hint', textContent: ' or press Enter' })])
+  for (let id = first.start; id < first.end && ids.length < MAX_REFERENCE_VERSES; id++) ids.push(id)
+  setResults(ids, [go, hint])
 }
 
 let debounceTimer
@@ -388,8 +409,8 @@ const runSearch = () => {
   clearTimeout(debounceTimer)
   const query = state.query.trim()
   document.body.classList.toggle('has-query', Boolean(query || state.scope.size))
-  const reference = query && parseReference(query)
-  if (reference) return showReference(reference)
+  const references = query ? findReferences(query) : []
+  if (references.length) return showReferences(references)
   if (!query) return showBrowse()
   if (!state.ready) return
   debounceTimer = setTimeout(() => {
@@ -413,7 +434,7 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
   ui.readerWork.textContent = book.work.name
   ui.readerTitle.textContent = book.chapters.length > 1 || book.slug === 'dc' ? `${book.name} ${chapter}` : book.name
   ui.reader.dataset.work = book.work.id
-  ui.readerLink.href = canon.studyUrl(book, chapter, verse)
+  ui.readerLink.href = canon.studyUrl(book, chapter, verse, last === null ? null : last - start + 1)
 
   const verses = []
   for (let id = start; id < end; id++) {
@@ -434,9 +455,11 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
   ui.reader.hidden = false
   document.body.classList.add('reading')
   const target = first !== null ? verses[first - start] : null
+  // Scroll only the reader pane; scrollIntoView would also scroll the page and tuck the reader under the top bar.
   requestAnimationFrame(() => {
-    if (target) target.scrollIntoView({ block: 'center' })
-    else ui.readerBody.scrollTop = 0
+    ui.readerBody.scrollTop = target
+      ? target.offsetTop - (ui.readerBody.clientHeight - target.offsetHeight) / 2
+      : 0
   })
   ui.results.querySelectorAll('.result.active').forEach(item => item.classList.remove('active'))
   if (first !== null) ui.results.querySelector(`.result[data-id="${first}"]`)?.classList.add('active')
@@ -472,11 +495,12 @@ ui.readerNext.addEventListener('click', () => stepChapter(1))
 ui.readerClose.addEventListener('click', closeReader)
 
 const openResult = item => {
-  const { book, chapter, verse } = canon.locate(Number(item.dataset.id))
-  openReader(book, chapter, verse)
+  const start = Number(item.dataset.id)
+  openPassage({ start, end: item.dataset.end ? Number(item.dataset.end) : start + 1 })
 }
 
 ui.results.addEventListener('click', event => {
+  if (event.target.closest('.result-link')) return
   const item = event.target.closest('.result')
   if (item) openResult(item)
 })
@@ -538,11 +562,9 @@ document.addEventListener('keydown', event => {
   }
 
   if (target === ui.query && key === 'Enter') {
-    const reference = parseReference(state.query.trim())
-    if (reference) {
-      const from = canon.locate(reference.start)
-      openReader(reference.book, from.chapter, from.verse, reference.end - 1)
-    } else ui.results.querySelector('.result')?.focus()
+    const [reference] = findReferences(state.query.trim())
+    if (reference) openPassage(reference)
+    else ui.results.querySelector('.result')?.focus()
     return
   }
 

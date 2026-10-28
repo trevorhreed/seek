@@ -362,6 +362,21 @@ body:not(.has-query) .segmented { display: none; }
   font-weight: 650;
   letter-spacing: .03em;
 }
+.result-link {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -4px -8px -4px 2px;
+  border-radius: 50%;
+  color: var(--ink-3);
+  opacity: 0;
+  transition: opacity .15s, background .15s, color .15s;
+}
+.result-link svg { width: 15px; height: 15px; }
+.result:hover .result-link, .result:focus-within .result-link, .result.active .result-link { opacity: 1; }
+.result-link:hover { background: var(--surface-2); color: var(--ink); }
+@media (hover: none) { .result-link { opacity: 1; } }
 .result-text {
   margin: 0;
   color: var(--ink);
@@ -470,6 +485,7 @@ body.has-query .welcome { display: none; }
 }
 
 .reader-body {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;

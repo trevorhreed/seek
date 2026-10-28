@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createReferenceParser } from '../src/lib/reference.js'
+import { createReferenceFinder, createReferenceParser } from '../src/lib/reference.js'
 import { createScopes } from '../src/lib/scope.js'
 import { canon } from './fixtures.js'
 
@@ -48,4 +48,33 @@ test('scope keys never collide and every collection parses', () => {
   const isaiah = mask(['isaiah'])
   assert.equal(isaiah[canon.verseId(canon.book('mosiah'), 14, 5)], 1)
   assert.equal(isaiah[canon.verseId(canon.book('mosiah'), 13, 5)], 0)
+})
+
+test('study links point at the highlighted verses', () => {
+  const alma = canon.book('alma')
+  assert.equal(canon.studyUrl(alma, 32, 21), 'https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/32?lang=eng&id=p21#p21')
+  assert.equal(canon.studyUrl(alma, 32, 21, 23), 'https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/32?lang=eng&id=p21-p23#p21')
+  assert.equal(canon.studyUrl(alma, 32), 'https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/32?lang=eng')
+})
+
+const find = createReferenceFinder(canon)
+const candidates = text => find(text).map(({ start, end }) => canon.rangeLabel(start, end))
+
+test('compact shortcuts offer every chapter:verse split', () => {
+  assert.deepEqual(candidates('1ne11'), ['1 Nephi 1:1', '1 Nephi 11'])
+  assert.deepEqual(candidates('alma3221'), ['Alma 32:21'])
+  assert.deepEqual(candidates('dc76'), ['D&C 7:6', 'D&C 76'])
+})
+
+test('an unnumbered base name covers the whole family of books', () => {
+  assert.deepEqual(candidates('ne222'), ['1 Nephi 2:22', '2 Nephi 2:22', '1 Nephi 22:2', '2 Nephi 22:2', '3 Nephi 22:2'])
+  assert.deepEqual(candidates('nephi 3:7'), ['1 Nephi 3:7', '2 Nephi 3:7', '3 Nephi 3:7'])
+})
+
+test('spaced and exact references stay unambiguous', () => {
+  assert.deepEqual(candidates('alma 32'), ['Alma 32'])
+  assert.deepEqual(candidates('john 3:16'), ['John 3:16'])
+  assert.deepEqual(candidates('jn316'), ['John 3:16'])
+  assert.deepEqual(candidates('isa 53'), ['Isaiah 53'])
+  assert.deepEqual(candidates('faith'), [])
 })

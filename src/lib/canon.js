@@ -70,9 +70,26 @@ export const createCanon = ({ works }) => {
     return `${book.name} ${chapter}:${verse}`
   }
 
-  const studyUrl = (book, chapter, verse) => {
-    const base = `${STUDY_URL}/${book.work.id}/${book.slug}/${chapter}`
-    return verse ? `${base}.${verse}?lang=eng#p${verse}` : `${base}?lang=eng`
+  // "Alma 32:21", "Alma 32:21–23", "Isaiah 2–14" or "Isaiah" for the [start, end) id range.
+  const rangeLabel = (start, end) => {
+    const from = locate(start)
+    const to = locate(end - 1)
+    if (start === from.book.start && end === from.book.end) return from.book.name
+    const head = `${from.book.name} ${from.chapter}`
+    const wholeChapters = from.verse === 1 && end === chapterRange(to.book, to.chapter)[1]
+    if (wholeChapters) return from.chapter === to.chapter ? head : `${head}–${to.chapter}`
+    if (from.chapter === to.chapter) {
+      return from.verse === to.verse ? `${head}:${from.verse}` : `${head}:${from.verse}–${to.verse}`
+    }
+    return `${head}:${from.verse}–${to.chapter}:${to.verse}`
+  }
+
+  // The study site takes a paragraph id (or range of them) to highlight: …/alma/32?lang=eng&id=p21-p23#p21
+  const studyUrl = (book, chapter, verse = null, lastVerse = verse) => {
+    const base = `${STUDY_URL}/${book.work.id}/${book.slug}/${chapter}?lang=eng`
+    if (!verse) return base
+    const id = lastVerse > verse ? `p${verse}-p${lastVerse}` : `p${verse}`
+    return `${base}&id=${id}#p${verse}`
   }
 
   const bySlug = new Map(books.map(book => [book.slug, book]))
@@ -86,6 +103,7 @@ export const createCanon = ({ works }) => {
     chapterRange,
     verseId,
     label,
+    rangeLabel,
     studyUrl,
     book: slug => bySlug.get(slug),
     work: id => workById.get(id)

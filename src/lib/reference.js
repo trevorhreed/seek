@@ -22,13 +22,14 @@ const EXTRA_ALIASES = {
   'hel': ['hela']
 }
 
-const REFERENCE = /^\s*(.+?)\s*(\d+)(?:\s*[:.]\s*(\d+))?(?:\s*[-–—]\s*(\d+)(?:\s*[:.]\s*(\d+))?)?\s*$/
+const REFERENCE = /^\s*(.+?)(\s*)(\d+)(?:\s*[:.]\s*(\d+))?(?:\s*[-–—]\s*(\d+)(?:\s*[:.]\s*(\d+))?)?\s*$/
 
 const normalizeBook = text => text
   .toLowerCase()
+  .trim()
+  .replace(/^(i{1,3})\s+/, (_, numeral) => String(numeral.length))
+  .replace(/^(first|second|third)\s+/, (_, word) => ({ first: '1', second: '2', third: '3' })[word])
   .replace(/[\s.\-—–'’]/g, '')
-  .replace(/^(i{1,3})(?=[a-z])/, numeral => String(numeral.length))
-  .replace(/^(first|second|third)/, word => ({ first: '1', second: '2', third: '3' })[word])
 
 export const createBookResolver = canon => {
   const aliases = new Map()
@@ -62,7 +63,7 @@ export const createReferenceParser = (canon, { allowBareBook = false } = {}) => 
 
     const match = REFERENCE.exec(text)
     if (!match) return null
-    const [, bookText, c1, v1, n2, v2] = match
+    const [, bookText, , c1, v1, n2, v2] = match
     const book = resolveBook(bookText)
     if (!book) return null
 
@@ -92,5 +93,82 @@ export const createReferenceParser = (canon, { allowBareBook = false } = {}) => 
     const last = canon.verseId(book, endChapter, lastVerse)
     if (last < start) return null
     return { book, start, end: last + 1 }
+  }
+}
+
+// Digit runs at least this long are split into chapter:verse guesses even with a space before them ("alma 3221").
+const MIN_SPACED_COMPACT_DIGITS = 3
+const MAX_CANDIDATES = 24
+
+// Resolves loose references to every plausible passage, best first, for the search box: "1ne11" is 1 Nephi
+// 1:1 or 1 Nephi 11, and "ne222" is 2:22 or 22:2 in any of 1–4 Nephi. Returns [] when nothing fits.
+export const createReferenceFinder = canon => {
+  const parse = createReferenceParser(canon)
+  const aliases = new Map()
+  const names = []
+  const families = new Map()
+  for (const book of canon.books) {
+    [book.name, book.slug, ...(EXTRA_ALIASES[book.slug] ?? [])].forEach(key => aliases.set(normalizeBook(key), book))
+    names.push([normalizeBook(book.name), [book]])
+    // Numbered books (1 Nephi, 2 Kings) also answer to their unnumbered base name or slug.
+    const numbered = /^\d\s+(.+)$/.exec(book.name)
+    if (!numbered) continue
+    for (const key of new Set([numbered[1], book.slug.replace(/^\d-/, '')].map(normalizeBook))) {
+      if (!families.has(key)) families.set(key, [])
+      families.get(key).push(book)
+    }
+  }
+  names.push(...families)
+
+  const resolveBooks = text => {
+    const key = normalizeBook(text)
+    if (!key) return []
+    if (aliases.has(key)) return [aliases.get(key)]
+    if (families.has(key)) return families.get(key)
+    // An unambiguous prefix of one book or one family of numbered books.
+    const groups = names.filter(([name]) => name.startsWith(key)).map(([, books]) => books)
+    const distinct = new Set(groups.map(books => books.map(book => book.slug).join()))
+    return distinct.size === 1 ? groups[0] : []
+  }
+
+  // Each guess is [chapter, verse | null]; verse-level splits come first, the whole-chapter reading last.
+  const compactGuesses = digits => {
+    const guesses = []
+    for (let i = 1; i < digits.length; i++) {
+      const chapter = digits.slice(0, i)
+      const verse = digits.slice(i)
+      if (verse.startsWith('0')) continue
+      guesses.push([Number(chapter), Number(verse)])
+    }
+    guesses.push([Number(digits), null])
+    return guesses
+  }
+
+  return text => {
+    const match = REFERENCE.exec(text)
+    if (!match) return []
+    const [, bookText, gap, digits, verse, rangeEnd] = match
+    const compact = verse === undefined && rangeEnd === undefined && digits.length > 1 &&
+      (gap === '' || digits.length >= MIN_SPACED_COMPACT_DIGITS)
+    const books = resolveBooks(bookText)
+    if (!compact) {
+      if (books.length === 1) {
+        const ref = parse(text)
+        return ref ? [ref] : []
+      }
+      const suffix = text.slice(match.index + bookText.length)
+      return books.flatMap(book => parse(`${book.name}${suffix}`) ?? [])
+    }
+
+    const candidates = []
+    for (const [chapter, verseNumber] of compactGuesses(digits)) {
+      for (const book of books) {
+        const start = canon.verseId(book, chapter, verseNumber ?? 1)
+        if (start < 0) continue
+        const end = verseNumber === null ? canon.chapterRange(book, chapter)[1] : start + 1
+        candidates.push({ book, start, end })
+      }
+    }
+    return candidates.slice(0, MAX_CANDIDATES)
   }
 }
