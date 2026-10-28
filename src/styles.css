@@ -287,8 +287,8 @@ kbd {
 .status { margin: 0; color: var(--ink-2); font-size: .9rem; }
 .status strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 .status .hint { color: var(--ink-3); }
-body:not(.has-query) .segmented { display: none; }
-.results-head .status { flex: 1 1 200px; }
+body:not(.has-query) .results-controls { display: none; }
+.results-controls { display: flex; flex-wrap: wrap; gap: 8px; }
 #mode button[data-mode="meaning"]::before { content: "✦ "; color: var(--accent); }
 
 .link-button {
@@ -698,6 +698,7 @@ body.has-query .welcome { display: none; }
   .chip-label-long { display: none; }
   .chip-label-short { display: inline; }
   .result { padding: 12px 14px 14px; }
+  .segmented button { padding: 0 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

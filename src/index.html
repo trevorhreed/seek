@@ -46,13 +46,15 @@
       <section class="results" aria-labelledby="status">
         <div class="results-head">
           <p class="status" id="status" aria-live="polite"></p>
-          <div class="segmented" role="radiogroup" aria-label="Match by" id="mode">
-            <button type="button" role="radio" data-mode="words" aria-checked="true">Words</button>
-            <button type="button" role="radio" data-mode="meaning" aria-checked="false" title="Also find verses with similar meaning">Meaning</button>
-          </div>
-          <div class="segmented" role="radiogroup" aria-label="Sort results" id="order">
-            <button type="button" role="radio" data-order="relevance" aria-checked="true">Best match</button>
-            <button type="button" role="radio" data-order="canonical" aria-checked="false">Canon order</button>
+          <div class="results-controls">
+            <div class="segmented" role="radiogroup" aria-label="Match by" id="mode">
+              <button type="button" role="radio" data-mode="words" aria-checked="true">Words</button>
+              <button type="button" role="radio" data-mode="meaning" aria-checked="false" title="Also find verses with similar meaning">Meaning</button>
+            </div>
+            <div class="segmented" role="radiogroup" aria-label="Sort results" id="order">
+              <button type="button" role="radio" data-order="relevance" aria-checked="true">Best match</button>
+              <button type="button" role="radio" data-order="canonical" aria-checked="false">Canon order</button>
+            </div>
           </div>
         </div>
         <ol class="result-list" id="results"></ol>
