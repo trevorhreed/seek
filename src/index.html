@@ -44,6 +44,10 @@
       <section class="results" aria-labelledby="status">
         <div class="results-head">
           <p class="status" id="status" aria-live="polite"></p>
+          <div class="segmented" role="radiogroup" aria-label="Match by" id="mode">
+            <button type="button" role="radio" data-mode="words" aria-checked="true">Words</button>
+            <button type="button" role="radio" data-mode="meaning" aria-checked="false" title="Also find verses with similar meaning">Meaning</button>
+          </div>
           <div class="segmented" role="radiogroup" aria-label="Sort results" id="order">
             <button type="button" role="radio" data-order="relevance" aria-checked="true">Best match</button>
             <button type="button" role="radio" data-order="canonical" aria-checked="false">Canon order</button>
@@ -85,6 +89,13 @@
           </button>
         </header>
         <div class="reader-body" id="reader-body"></div>
+        <section class="related" id="related" aria-labelledby="related-title" hidden>
+          <button class="related-head" id="related-toggle" type="button" aria-expanded="true">
+            <span id="related-title"></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <ol class="related-list" id="related-list"></ol>
+        </section>
       </aside>
     </main>
 

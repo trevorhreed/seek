@@ -8,6 +8,9 @@ const MAX_PREFIX_EXPANSIONS = 40
 const MIN_PREFIX_LENGTH = 2
 const PHRASE_BONUS = 1.5
 const MAX_PHRASE_BONUS_CHECKS = 3000
+// Words in more verses than this share aren't highlighted (unless every query word is that common), so
+// "for those who mourn" marks "mourn", not every "for".
+const HIGHLIGHT_MAX_DOC_SHARE = 0.05
 
 const WORD = /[a-z0-9æ]+(?:['’][a-z]+)*/g
 
@@ -266,5 +269,9 @@ export const search = (index, query, { scope = null, order = 'relevance' } = {})
 
   if (order === 'canonical') candidates.sort((a, b) => a - b)
 
-  return { ids: Int32Array.from(candidates), partial, matched, unscoped }
+  const isCommon = term => (index.termData.get(term)?.ids.length ?? 0) / docCount > HIGHLIGHT_MAX_DOC_SHARE
+  const highlighted = terms.every(term => isCommon(term.stem))
+    ? matched
+    : new Set([...matched].filter(term => !isCommon(term)))
+  return { ids: Int32Array.from(candidates), partial, matched: highlighted, unscoped }
 }

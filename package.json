@@ -11,7 +11,8 @@
     "data": "node scripts/build-data.js",
     "start": "npm run data && node scripts/serve.js",
     "build": "npm run data && node scripts/build.js",
-    "test": "npm run data && node --test"
+    "test": "npm run data && node --test",
+    "embeddings": "npm run data && node scripts/build-embeddings.js"
   },
   "repository": {
     "type": "git",
@@ -19,5 +20,8 @@
   },
   "author": "Trevor Reed",
   "license": "ISC",
-  "homepage": "https://trevorhreed.github.io/seek/"
+  "homepage": "https://trevorhreed.github.io/seek/",
+  "devDependencies": {
+    "@huggingface/transformers": "4.3.0"
+  }
 }
