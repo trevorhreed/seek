@@ -54,8 +54,7 @@ const state = {
   counts: null,
   reader: null,
   searchId: 0,
-  ready: false,
-  readyMs: 0
+  ready: false
 }
 
 // ---- Theme -------------------------------------------------------------------------------------------------
@@ -99,7 +98,6 @@ ui.status.textContent = `Indexing ${formatNumber(canon.verseCount)} verses…`
 worker.addEventListener('message', ({ data: message }) => {
   if (message.type === 'ready') {
     state.ready = true
-    state.readyMs = message.ms
     runSearch()
   } else if (message.type === 'results' && message.id === state.searchId) {
     showResults(message)
@@ -351,7 +349,7 @@ const showBrowse = () => {
   renderWorkChips()
   const keys = [...state.scope]
   if (!keys.length) {
-    setResults([], state.ready ? `${formatNumber(canon.verseCount)} verses indexed in ${state.readyMs} ms.` : ui.status.textContent)
+    setResults([], state.ready ? '' : ui.status.textContent)
     return
   }
   setResults([], `Searching only ${keys.map(scopes.labelFor).join(', ')}. Type to search, or pick a chapter.`)

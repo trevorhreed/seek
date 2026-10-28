@@ -424,16 +424,27 @@ mark {
 
 /* ---- Welcome ---------------------------------------------------------------------------------------------- */
 
-.welcome { padding: 6vh 0 0; text-align: center; }
+.welcome { padding: 10vh 0 0; text-align: center; }
 body.has-query .welcome { display: none; }
 .welcome h1 {
-  margin: 0 0 12px;
+  margin: 0 0 36px;
   font: 600 clamp(2rem, 6vw, 3.2rem)/1.1 var(--serif);
   letter-spacing: -.02em;
+  text-wrap: balance;
 }
-.welcome > p { max-width: 34em; margin: 0 auto 28px; color: var(--ink-2); font-size: 1.05rem; text-wrap: balance; }
-.examples { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 40px; }
+.examples-label {
+  margin: 0 0 12px;
+  color: var(--ink-3);
+  font-size: .75rem;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.examples { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 640px; margin: 0 auto 32px; }
 .example {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   padding: 8px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -442,18 +453,13 @@ body.has-query .welcome { display: none; }
   font: .95rem var(--serif);
   transition: border-color .15s, transform .15s;
 }
+.example small { color: var(--ink-3); font: .75rem var(--sans); }
 .example:hover { border-color: var(--accent); transform: translateY(-1px); }
-.tips {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
-  max-width: 720px;
-  margin: 0 auto;
-  text-align: left;
-}
-.tips div { padding: 14px 16px; border-radius: var(--radius); background: var(--surface-2); }
-.tips dt { margin-bottom: 2px; font-weight: 650; font-size: .9rem; }
-.tips dd { margin: 0; color: var(--ink-2); font-size: .85rem; }
+.keys { margin: 0; color: var(--ink-3); font-size: .8rem; }
+.keys kbd { margin: 0 2px 0 8px; }
+.keys kbd + kbd { margin-left: 0; }
+.keys kbd:first-child { margin-left: 0; }
+@media (hover: none) { .keys { display: none; } }
 
 /* ---- Reader ----------------------------------------------------------------------------------------------- */
 
@@ -628,7 +634,6 @@ body.has-query .welcome { display: none; }
   .chip-label-long { display: none; }
   .chip-label-short { display: inline; }
   .result { padding: 12px 14px 14px; }
-  .tips { grid-template-columns: 1fr 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
