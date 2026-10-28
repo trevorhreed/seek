@@ -5,7 +5,7 @@ import { forEachWord, stem } from './lib/search.js'
 import { fuse, relatedTo } from './lib/semantic.js'
 
 const DATA_URL = './data/scriptures.json'
-const VECTORS_URL = './data/vectors.bin'
+const RELATED_URL = './data/related.bin'
 // Embedding a query costs more than a keyword lookup, so meaning search waits a little longer between keystrokes.
 const MEANING_DEBOUNCE_MS = 300
 const MEANING_KEYWORD_LIMIT = 300
@@ -68,6 +68,12 @@ const state = {
   searchId: 0,
   ready: false
 }
+
+// The top bar and filter chips stick together; the reader sizes itself to the space below them.
+const masthead = document.querySelector('.masthead')
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty('--masthead-h', `${masthead.offsetHeight}px`)
+}).observe(masthead)
 
 // ---- Theme -------------------------------------------------------------------------------------------------
 
@@ -168,20 +174,18 @@ const showMeaningResults = () => {
 
 // ---- Related verses ----------------------------------------------------------------------------------------
 
-let vectorsPromise
-const loadVectors = () => (vectorsPromise ??= fetch(VECTORS_URL)
+let relatedPromise
+const loadRelated = () => (relatedPromise ??= fetch(RELATED_URL)
   .then(response => response.arrayBuffer())
-  .then(buffer => new Uint8Array(buffer)))
+  .then(buffer => new Uint16Array(buffer)))
 
 const showRelated = async verseId => {
   ui.related.hidden = false
   ui.relatedTitle.textContent = `Related to ${canon.label(verseId)}`
   ui.relatedList.replaceChildren(el('li', { className: 'related-empty', textContent: 'Finding related verses…' }))
-  const bits = await loadVectors()
+  const related = await loadRelated()
   if (state.reader?.id !== verseId) return
-  const { book, chapter } = canon.locate(verseId)
-  const [start, end] = canon.chapterRange(book, chapter)
-  ui.relatedList.replaceChildren(...relatedTo(bits, verseId, start, end).map(id => {
+  ui.relatedList.replaceChildren(...relatedTo(related, verseId).map(id => {
     const item = el('li', {},
       el('button', { type: 'button' },
         el('span', { className: 'related-ref', textContent: canon.label(id) }),

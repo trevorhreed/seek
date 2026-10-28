@@ -12,7 +12,7 @@
     "start": "npm run data && node scripts/serve.js",
     "build": "npm run data && node scripts/build.js",
     "test": "npm run data && node --test",
-    "embeddings": "npm run data && node scripts/build-embeddings.js"
+    "embeddings": "npm run data && node scripts/build-embeddings.js && python3 scripts/build-related.py"
   },
   "repository": {
     "type": "git",

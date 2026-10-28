@@ -9,9 +9,8 @@ import { fileURLToPath } from 'node:url'
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE = resolve(ROOT, 'data/verses.json')
 const DEST = resolve(ROOT, 'src/data/scriptures.json')
-// Built by scripts/build-embeddings.js and committed, since embedding every verse takes minutes.
-const VECTORS = resolve(ROOT, 'data/semantic/vectors.bin')
-const VECTORS_DEST = resolve(ROOT, 'src/data/vectors.bin')
+// Built by `npm run embeddings` and committed, since embedding every verse takes minutes.
+const SEMANTIC_FILES = ['vectors.bin', 'related.bin']
 
 // Slugs match churchofjesuschrist.org study URLs so ids double as outbound links.
 const WORKS = [
@@ -96,7 +95,9 @@ const build = async () => {
 
   await mkdir(dirname(DEST), { recursive: true })
   await writeFile(DEST, JSON.stringify({ works, text }))
-  await copyFile(VECTORS, VECTORS_DEST)
+  for (const file of SEMANTIC_FILES) {
+    await copyFile(resolve(ROOT, 'data/semantic', file), resolve(dirname(DEST), file))
+  }
   console.log(`Wrote ${text.length} verses to ${DEST}`)
 }
 

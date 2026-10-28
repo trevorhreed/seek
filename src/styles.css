@@ -124,18 +124,21 @@ kbd {
 
 /* ---- Top bar ---------------------------------------------------------------------------------------------- */
 
-.topbar {
+.masthead {
   position: sticky;
   top: 0;
   z-index: 10;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+}
+
+.topbar {
   display: flex;
   align-items: center;
   gap: 12px;
   height: var(--topbar-h);
   padding: 0 var(--gutter);
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: saturate(1.4) blur(14px);
-  -webkit-backdrop-filter: saturate(1.4) blur(14px);
 }
 
 .brand {
@@ -467,10 +470,10 @@ body.has-query .welcome { display: none; }
 
 .reader {
   position: sticky;
-  top: calc(var(--topbar-h) + 8px);
+  top: var(--masthead-h, 120px);
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - var(--topbar-h) - 24px);
+  height: calc(100dvh - var(--masthead-h, 120px) - 16px);
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 4px);
   background: var(--surface);

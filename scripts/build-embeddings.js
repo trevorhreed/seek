@@ -1,21 +1,21 @@
 #!/usr/bin/env node
-// Embeds every verse with the same model the browser uses for queries and writes data/semantic/vectors.bin:
-// 1 bit per dimension per verse (the sign of each component). It's committed, since embedding takes minutes.
-// Full-precision embeddings are cached in .cache/ so changing the quantization doesn't re-embed.
+// Embeds every verse with the same model the browser uses for queries and writes data/semantic/vectors.bin,
+// 4 bits per dimension per verse (see src/lib/semantic.js). It's committed, since embedding takes minutes.
+// Full-precision embeddings are cached in .cache/ so changing the quantization doesn't re-embed, and
+// scripts/build-related.py reads them to precompute related verses.
 
 import { pipeline } from '@huggingface/transformers'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { EMBEDDING_MODEL, EMBEDDING_DTYPE, DIMENSIONS } from '../src/lib/semantic.js'
+import { EMBEDDING_MODEL, EMBEDDING_DTYPE, DIMENSIONS, quantize } from '../src/lib/semantic.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DATA = resolve(ROOT, 'src/data/scriptures.json')
 const CACHE = resolve(ROOT, '.cache/embeddings.f32')
 const OUT = resolve(ROOT, 'data/semantic')
 const BATCH_SIZE = 64
-const BYTES = DIMENSIONS / 8
 
 const data = JSON.parse(await readFile(DATA, 'utf8'))
 const count = data.text.length
@@ -39,18 +39,8 @@ const embedAll = async () => {
   return vectors
 }
 
-const toBits = vectors => {
-  const bits = new Uint8Array(count * BYTES)
-  for (let v = 0; v < count; v++) {
-    for (let d = 0; d < DIMENSIONS; d++) {
-      if (vectors[v * DIMENSIONS + d] > 0) bits[v * BYTES + (d >> 3)] |= 1 << (d & 7)
-    }
-  }
-  return bits
-}
-
 const vectors = await embedAll()
-const bits = toBits(vectors)
+const quantized = quantize(vectors)
 await mkdir(OUT, { recursive: true })
-await writeFile(resolve(OUT, 'vectors.bin'), bits)
-console.log(`Wrote ${OUT}/vectors.bin (${bits.length} B)`)
+await writeFile(resolve(OUT, 'vectors.bin'), quantized)
+console.log(`Wrote ${OUT}/vectors.bin (${quantized.length} B)`)
