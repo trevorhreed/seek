@@ -428,7 +428,7 @@ const setResults = (ids, status) => {
   renderMore()
 }
 
-const showResults = ({ ids, partial, matched, counts }) => {
+const showResults = ({ ids, matched, counts }) => {
   state.matched = new Set(matched)
   state.counts = counts
   renderWorkChips()
@@ -437,7 +437,6 @@ const showResults = ({ ids, partial, matched, counts }) => {
   const where = state.scope.size ? ` in ${[...state.scope].map(scopes.labelFor).join(', ')}` : ''
   let status
   if (!total) status = `No verses found${where}.`
-  else if (partial) status = `No verse has all of these words${where}. Showing the ${formatNumber(total)} with the most of them.`
   else status = [el('strong', { textContent: formatNumber(total) }), ` ${total === 1 ? 'verse' : 'verses'}${where}`]
   setResults([...ids], status)
 }

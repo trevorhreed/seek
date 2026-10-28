@@ -26,7 +26,7 @@ const run = ({ id, query, scope, order }) => {
   const counts = Object.fromEntries(canon.works.map(work => [work.id, 0]))
   for (const verseId of result.unscoped) counts[canon.locate(verseId).work.id]++
   postMessage(
-    { type: 'results', id, ids: result.ids, partial: result.partial, matched: [...result.matched], counts },
+    { type: 'results', id, ids: result.ids, matched: [...result.matched], counts },
     [result.ids.buffer]
   )
 }
