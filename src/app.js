@@ -169,7 +169,7 @@ const showMeaningResults = () => {
   let ids = fuse([...keyword.ids.slice(0, MEANING_KEYWORD_LIMIT)], semantic)
   if (state.order === 'canonical') ids = ids.sort((a, b) => a - b)
   const where = state.scope.size ? ` in ${[...state.scope].map(scopes.labelFor).join(', ')}` : ''
-  setResults(ids, [el('strong', { textContent: formatNumber(ids.length) }), ` verses by words and meaning${where}`])
+  setResults(ids, [el('strong', { textContent: formatNumber(ids.length) }), ` ${ids.length === 1 ? 'verse' : 'verses'}${where}`])
 }
 
 // ---- Related verses ----------------------------------------------------------------------------------------
