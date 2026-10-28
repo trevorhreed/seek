@@ -198,8 +198,11 @@ kbd {
 .icon-button:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
 .icon-button:disabled { opacity: .35; cursor: default; }
 .icon-button svg { width: 20px; height: 20px; }
-#theme[data-theme="dark"] svg { fill: currentColor; }
-#theme[data-theme="light"] svg circle { fill: currentColor; }
+/* The theme button shows the current mode: half-filled circle for system, sun for light, moon for dark. */
+#theme svg { display: none; }
+#theme[data-theme="auto"] .theme-auto,
+#theme[data-theme="light"] .theme-light,
+#theme[data-theme="dark"] .theme-dark { display: block; }
 
 /* ---- Scope bar -------------------------------------------------------------------------------------------- */
 

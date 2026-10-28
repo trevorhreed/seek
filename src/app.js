@@ -9,6 +9,7 @@ const MAX_REFERENCE_VERSES = 200
 const SEARCH_DEBOUNCE_MS = 120
 const THEME_KEY = 'seek:theme'
 const THEMES = ['auto', 'light', 'dark']
+const THEME_LABELS = { auto: 'match system', light: 'light', dark: 'dark' }
 
 const $ = id => document.getElementById(id)
 const el = (tag, props = {}, ...children) => {
@@ -67,7 +68,9 @@ const storage = {
 const applyTheme = theme => {
   if (theme === 'auto') delete document.documentElement.dataset.theme
   else document.documentElement.dataset.theme = theme
-  ui.theme.title = `Theme: ${theme}`
+  const label = `Theme: ${THEME_LABELS[theme]}`
+  ui.theme.title = label
+  ui.theme.ariaLabel = `${label}. Switch to ${THEME_LABELS[THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]]}`
   ui.theme.dataset.theme = theme
 }
 applyTheme(THEMES.includes(storage.get(THEME_KEY)) ? storage.get(THEME_KEY) : 'auto')
