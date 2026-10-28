@@ -124,18 +124,21 @@ kbd {
 
 /* ---- Top bar ---------------------------------------------------------------------------------------------- */
 
-.topbar {
+.masthead {
   position: sticky;
   top: 0;
   z-index: 10;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+}
+
+.topbar {
   display: flex;
   align-items: center;
   gap: 12px;
   height: var(--topbar-h);
   padding: 0 var(--gutter);
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: saturate(1.4) blur(14px);
-  -webkit-backdrop-filter: saturate(1.4) blur(14px);
 }
 
 .brand {
@@ -181,7 +184,9 @@ kbd {
 }
 .searchbox input::placeholder { color: var(--ink-3); }
 .searchbox input::-webkit-search-cancel-button { cursor: pointer; }
-.searchbox:focus-within kbd { display: none; }
+/* Hide the / hint while typing or once there's text, so the clear button never shifts under the cursor. */
+.searchbox:focus-within kbd { visibility: hidden; }
+.searchbox:has(input:not(:placeholder-shown)) kbd { display: none; }
 
 .icon-button {
   flex: none;
@@ -247,10 +252,43 @@ kbd {
 }
 .chip[data-empty]:not([aria-pressed="true"]) { opacity: .55; }
 .chip[aria-pressed="true"] .count { background: color-mix(in srgb, var(--work) 22%, var(--surface)); }
+/* Tooltips for filter chips, shown after a short hover delay; native titles are too slow and easy to miss. */
+.chip[data-tip] { position: relative; }
+.chip[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: 240px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: .78rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre-line;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity .12s, transform .12s;
+}
+.chip[data-tip]:hover::after, .chip[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: .35s;
+}
+@media (hover: none) { .chip[data-tip]::after { display: none; } }
 .chip-x { margin-right: -3px; color: var(--ink-3); font-size: 1.1rem; line-height: 1; }
 .chip-add { border-style: dashed; }
 .chip-add svg { width: 15px; height: 15px; }
 .chip-label-short { display: none; }
+.scopebar.compact .chip-label-long { display: none; }
+.scopebar.compact .chip-label-short { display: inline; }
 
 /* ---- Layout ----------------------------------------------------------------------------------------------- */
 
@@ -284,7 +322,9 @@ kbd {
 .status { margin: 0; color: var(--ink-2); font-size: .9rem; }
 .status strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 .status .hint { color: var(--ink-3); }
-body:not(.has-query) .segmented { display: none; }
+body:not(.has-query) .results-controls { display: none; }
+.results-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+#mode button[data-mode="meaning"]::before { content: "✦ "; color: var(--accent); }
 
 .link-button {
   padding: 0;
@@ -465,10 +505,10 @@ body.has-query .welcome { display: none; }
 
 .reader {
   position: sticky;
-  top: calc(var(--topbar-h) + 8px);
+  top: var(--masthead-h, 120px);
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - var(--topbar-h) - 24px);
+  height: calc(100dvh - var(--masthead-h, 120px) - 16px);
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 4px);
   background: var(--surface);
@@ -516,6 +556,65 @@ body.has-query .welcome { display: none; }
   vertical-align: .35em;
   font-variant-numeric: tabular-nums;
 }
+
+.verse { cursor: pointer; }
+
+.related {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  max-height: 38%;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.related.collapsed { max-height: none; }
+.related.collapsed .related-list { display: none; }
+.related.collapsed .related-head svg { transform: rotate(180deg); }
+.related-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: .75rem;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.related-head svg { width: 16px; height: 16px; transition: transform .15s; }
+.related-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 12px 12px;
+  overflow-y: auto;
+  list-style: none;
+}
+.related-list button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--work, var(--line));
+  border-radius: 10px;
+  background: var(--surface);
+  text-align: left;
+}
+.related-list button:hover { border-color: var(--work); }
+.related-ref { font-size: .8rem; font-weight: 650; }
+.related-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--ink-2);
+  font: .92rem/1.45 var(--serif);
+}
+.related-empty { padding: 8px 6px; color: var(--ink-3); font-size: .85rem; }
 
 @media (max-width: 1039px) {
   .reader {
@@ -634,6 +733,7 @@ body.has-query .welcome { display: none; }
   .chip-label-long { display: none; }
   .chip-label-short { display: inline; }
   .result { padding: 12px 14px 14px; }
+  .segmented button { padding: 0 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

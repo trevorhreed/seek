@@ -2,13 +2,15 @@
 // Turns data/verses.json (one object per verse) into the compact file the app loads: the canon's structure
 // once, then every verse's text in canonical order, so a verse's position in `text` is its id.
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { copyFile, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE = resolve(ROOT, 'data/verses.json')
 const DEST = resolve(ROOT, 'src/data/scriptures.json')
+// Built by `npm run embeddings` and committed, since embedding every verse takes minutes.
+const SEMANTIC_FILES = ['vectors.bin', 'related.bin']
 
 // Slugs match churchofjesuschrist.org study URLs so ids double as outbound links.
 const WORKS = [
@@ -93,6 +95,9 @@ const build = async () => {
 
   await mkdir(dirname(DEST), { recursive: true })
   await writeFile(DEST, JSON.stringify({ works, text }))
+  for (const file of SEMANTIC_FILES) {
+    await copyFile(resolve(ROOT, 'data/semantic', file), resolve(dirname(DEST), file))
+  }
   console.log(`Wrote ${text.length} verses to ${DEST}`)
 }
 

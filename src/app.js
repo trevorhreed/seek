@@ -2,8 +2,13 @@ import { createCanon } from './lib/canon.js'
 import { createReferenceFinder } from './lib/reference.js'
 import { createScopes } from './lib/scope.js'
 import { forEachWord, stem } from './lib/search.js'
+import { fuse, relatedTo } from './lib/semantic.js'
 
 const DATA_URL = './data/scriptures.json'
+const RELATED_URL = './data/related.bin'
+// Embedding a query costs more than a keyword lookup, so meaning search waits a little longer between keystrokes.
+const MEANING_DEBOUNCE_MS = 300
+const MEANING_KEYWORD_LIMIT = 300
 const PAGE_SIZE = 40
 const MAX_REFERENCE_VERSES = 200
 const SEARCH_DEBOUNCE_MS = 120
@@ -23,6 +28,11 @@ const ui = {
   query: $('query'),
   status: $('status'),
   order: $('order'),
+  mode: $('mode'),
+  related: $('related'),
+  relatedTitle: $('related-title'),
+  relatedToggle: $('related-toggle'),
+  relatedList: $('related-list'),
   results: $('results'),
   sentinel: $('sentinel'),
   welcome: $('welcome'),
@@ -48,6 +58,8 @@ const state = {
   query: '',
   scope: new Set(),
   order: 'relevance',
+  mode: 'words',
+  pending: null,
   ids: [],
   rendered: 0,
   matched: new Set(),
@@ -56,6 +68,12 @@ const state = {
   searchId: 0,
   ready: false
 }
+
+// The top bar and filter chips stick together; the reader sizes itself to the space below them.
+const masthead = document.querySelector('.masthead')
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty('--masthead-h', `${masthead.offsetHeight}px`)
+}).observe(masthead)
 
 // ---- Theme -------------------------------------------------------------------------------------------------
 
@@ -100,8 +118,88 @@ worker.addEventListener('message', ({ data: message }) => {
     state.ready = true
     runSearch()
   } else if (message.type === 'results' && message.id === state.searchId) {
-    showResults(message)
+    if (state.mode === 'meaning') {
+      state.pending.keyword = message
+      showMeaningResults()
+    } else showResults(message)
   }
+})
+
+// ---- Meaning search ----------------------------------------------------------------------------------------
+
+let semanticWorker
+let semanticReady = false
+const getSemanticWorker = () => {
+  if (semanticWorker) return semanticWorker
+  semanticWorker = new Worker(new URL('./semantic-worker.js', import.meta.url), { type: 'module' })
+  semanticWorker.addEventListener('message', ({ data: message }) => {
+    if (message.type === 'progress' && state.mode === 'meaning' && !semanticReady) {
+      ui.status.textContent = `Downloading the meaning model (one time)… ${Math.round(100 * message.loaded / message.total)}%`
+    } else if (message.type === 'ready') {
+      semanticReady = true
+    } else if (message.type === 'results' && message.id === state.searchId && state.pending) {
+      state.pending.semantic = message.ids
+      showMeaningResults()
+    } else if (message.type === 'error') {
+      ui.status.textContent = `Meaning search failed: ${message.message}`
+    }
+  })
+  semanticWorker.addEventListener('error', () => {
+    ui.status.textContent = 'Meaning search couldn’t load. Check your connection and try again.'
+  })
+  semanticWorker.postMessage({ type: 'load' })
+  return semanticWorker
+}
+
+const maskCache = new Map()
+const scopeMask = () => {
+  const key = [...state.scope].sort().join(',')
+  if (!maskCache.has(key)) maskCache.set(key, scopes.mask([...state.scope]))
+  return maskCache.get(key)
+}
+
+// Blends the keyword and meaning rankings once both have arrived for the current query.
+const showMeaningResults = () => {
+  const { keyword, semantic } = state.pending ?? {}
+  if (!keyword || !semantic) return
+  state.matched = new Set(keyword.matched)
+  state.counts = null
+  renderWorkChips()
+  if (state.reader) refreshReaderHighlights()
+  let ids = fuse([...keyword.ids.slice(0, MEANING_KEYWORD_LIMIT)], semantic)
+  if (state.order === 'canonical') ids = ids.sort((a, b) => a - b)
+  const where = state.scope.size ? ` in ${[...state.scope].map(scopes.labelFor).join(', ')}` : ''
+  setResults(ids, [el('strong', { textContent: formatNumber(ids.length) }), ` ${ids.length === 1 ? 'verse' : 'verses'}${where}`])
+}
+
+// ---- Related verses ----------------------------------------------------------------------------------------
+
+let relatedPromise
+const loadRelated = () => (relatedPromise ??= fetch(RELATED_URL)
+  .then(response => response.arrayBuffer())
+  .then(buffer => new Uint16Array(buffer)))
+
+const showRelated = async verseId => {
+  ui.related.hidden = false
+  ui.relatedTitle.textContent = `Related to ${canon.label(verseId)}`
+  ui.relatedList.replaceChildren(el('li', { className: 'related-empty', textContent: 'Finding related verses…' }))
+  const related = await loadRelated()
+  if (state.reader?.id !== verseId) return
+  ui.relatedList.replaceChildren(...relatedTo(related, verseId).map(id => {
+    const item = el('li', {},
+      el('button', { type: 'button' },
+        el('span', { className: 'related-ref', textContent: canon.label(id) }),
+        el('span', { className: 'related-text', textContent: data.text[id] })))
+    item.dataset.work = canon.locate(id).work.id
+    item.querySelector('button').addEventListener('click', () => openPassage({ start: id, end: id + 1 }))
+    return item
+  }))
+}
+
+ui.relatedToggle.addEventListener('click', () => {
+  const expanded = ui.relatedToggle.getAttribute('aria-expanded') === 'true'
+  ui.relatedToggle.setAttribute('aria-expanded', !expanded)
+  ui.related.classList.toggle('collapsed', expanded)
 })
 
 // ---- URL state ---------------------------------------------------------------------------------------------
@@ -111,6 +209,7 @@ const readUrl = () => {
   state.query = params.get('q') ?? ''
   state.scope = new Set((params.get('in') ?? '').split(',').filter(scopes.isKey))
   state.order = params.get('sort') === 'canonical' ? 'canonical' : 'relevance'
+  state.mode = params.get('mode') === 'meaning' ? 'meaning' : 'words'
   const [slug, chapter, verse] = (params.get('v') ?? '').split('.')
   const book = canon.book(slug)
   if (book && canon.verseId(book, Number(chapter), Number(verse) || 1) >= 0) {
@@ -123,6 +222,7 @@ const writeUrl = () => {
   if (state.query) params.set('q', state.query)
   if (state.scope.size) params.set('in', [...state.scope].join(','))
   if (state.order !== 'relevance') params.set('sort', state.order)
+  if (state.mode !== 'words') params.set('mode', state.mode)
   if (state.reader) {
     const { book, chapter, verse } = state.reader
     params.set('v', [book.slug, chapter, verse].filter(Boolean).join('.'))
@@ -152,24 +252,38 @@ const highlight = (text, matched) => {
 
 // ---- Scope chips -------------------------------------------------------------------------------------------
 
+const scopebar = document.querySelector('.scopebar')
+// Switches the volume chips to short names (OT, NT…) when the full names would wrap the filter row, e.g. once
+// match counts are added to each chip.
+const fitScopebar = () => {
+  scopebar.classList.remove('compact')
+  const first = scopebar.querySelector('.chip')
+  if (first && scopebar.lastElementChild.offsetTop > first.offsetTop) scopebar.classList.add('compact')
+}
+window.addEventListener('resize', fitScopebar)
+
 const renderWorkChips = () => {
   ui.workChips.replaceChildren(...canon.works.map(work => {
     const count = state.counts?.[work.id]
+    const selected = state.scope.has(work.id)
+    const matches = count === undefined ? '' : ` · ${formatNumber(count)} ${count === 1 ? 'match' : 'matches'}`
     const chip = el('button', {
       type: 'button',
       className: 'chip',
-      title: work.name
+      ariaLabel: `${work.name}${matches}`
     },
     el('span', { className: 'swatch' }),
     el('span', { className: 'chip-label-long', textContent: work.name }),
     el('span', { className: 'chip-label-short', textContent: work.short }),
     count === undefined ? null : el('span', { className: 'count', textContent: formatNumber(count) }))
     chip.dataset.work = work.id
+    chip.dataset.tip = `${work.name}${matches}\n${selected ? 'Click to stop filtering' : 'Click to search only here'}`
     if (count === 0) chip.dataset.empty = ''
-    chip.setAttribute('aria-pressed', state.scope.has(work.id))
+    chip.setAttribute('aria-pressed', selected)
     chip.addEventListener('click', () => toggleScope(work.id))
     return chip
   }))
+  fitScopebar()
 }
 
 const renderCustomChips = () => {
@@ -179,17 +293,19 @@ const renderCustomChips = () => {
     const chip = el('button', {
       type: 'button',
       className: 'chip chip-removable',
-      title: `Remove ${scopes.labelFor(key)}`
+      ariaLabel: `Remove ${scopes.labelFor(key)} filter`
     },
     el('span', { className: 'swatch' }),
     el('span', { textContent: scopes.labelFor(key) }),
     el('span', { className: 'chip-x', 'aria-hidden': true, textContent: '×' }))
+    chip.dataset.tip = `${book ? `${book.name} (${book.work.name})` : scopes.labelFor(key)}\nClick to remove`
     if (book) chip.dataset.work = book.work.id
     else chip.dataset.collection = ''
     chip.setAttribute('aria-pressed', 'true')
     chip.addEventListener('click', () => toggleScope(key))
     return chip
   }))
+  fitScopebar()
 }
 
 const toggleScope = key => {
@@ -328,7 +444,7 @@ const setResults = (ids, status) => {
   renderMore()
 }
 
-const showResults = ({ ids, partial, matched, counts }) => {
+const showResults = ({ ids, matched, counts }) => {
   state.matched = new Set(matched)
   state.counts = counts
   renderWorkChips()
@@ -337,7 +453,6 @@ const showResults = ({ ids, partial, matched, counts }) => {
   const where = state.scope.size ? ` in ${[...state.scope].map(scopes.labelFor).join(', ')}` : ''
   let status
   if (!total) status = `No verses found${where}.`
-  else if (partial) status = `No verse has every word. ${formatNumber(total)} closest ${total === 1 ? 'match' : 'matches'}${where}.`
   else status = [el('strong', { textContent: formatNumber(total) }), ` ${total === 1 ? 'verse' : 'verses'}${where}`]
   setResults([...ids], status)
 }
@@ -414,10 +529,16 @@ const runSearch = () => {
   if (references.length) return showReferences(references)
   if (!query) return showBrowse()
   if (!state.ready) return
+  const meaning = state.mode === 'meaning'
   debounceTimer = setTimeout(() => {
     state.searchId++
     worker.postMessage({ type: 'search', id: state.searchId, query: state.query, scope: [...state.scope], order: state.order })
-  }, SEARCH_DEBOUNCE_MS)
+    if (meaning) {
+      state.pending = { keyword: null, semantic: null }
+      getSemanticWorker().postMessage({ type: 'search', id: state.searchId, query: state.query.trim(), scope: scopeMask() })
+      if (semanticReady) ui.status.textContent = 'Searching by meaning…'
+    }
+  }, meaning ? MEANING_DEBOUNCE_MS : SEARCH_DEBOUNCE_MS)
 }
 
 new IntersectionObserver(entries => {
@@ -464,8 +585,24 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
   })
   ui.results.querySelectorAll('.result.active').forEach(item => item.classList.remove('active'))
   if (first !== null) ui.results.querySelector(`.result[data-id="${first}"]`)?.classList.add('active')
+  if (first !== null) showRelated(first)
+  else ui.related.hidden = true
   writeUrl()
 }
+
+// Clicking a verse in the reader selects it and shows what it relates to.
+ui.readerBody.addEventListener('click', event => {
+  const verse = event.target.closest('.verse')
+  if (!verse || !state.reader || getSelection().toString()) return
+  const id = Number(verse.dataset.id)
+  ui.readerBody.querySelectorAll('.verse.selected').forEach(other => other.classList.remove('selected'))
+  verse.classList.add('selected')
+  const { book, chapter, verse: number } = canon.locate(id)
+  state.reader = { book, chapter, verse: number, id }
+  ui.readerLink.href = canon.studyUrl(book, chapter, number)
+  writeUrl()
+  showRelated(id)
+})
 
 // Re-marks the open chapter for a new query without moving its scroll position.
 const refreshReaderHighlights = () => {
@@ -522,6 +659,22 @@ ui.order.addEventListener('click', event => {
   writeUrl()
   runSearch()
 })
+
+ui.mode.addEventListener('click', event => {
+  const button = event.target.closest('[data-mode]')
+  if (!button || button.dataset.mode === state.mode) return
+  state.mode = button.dataset.mode
+  syncMode()
+  if (state.mode === 'meaning') getSemanticWorker()
+  writeUrl()
+  runSearch()
+})
+
+const syncMode = () => {
+  ui.mode.querySelectorAll('[data-mode]').forEach(button => {
+    button.setAttribute('aria-checked', button.dataset.mode === state.mode)
+  })
+}
 
 const syncOrder = () => {
   ui.order.querySelectorAll('[data-order]').forEach(button => {
@@ -600,6 +753,8 @@ document.addEventListener('keydown', event => {
 readUrl()
 ui.query.value = state.query
 syncOrder()
+syncMode()
+if (state.mode === 'meaning') getSemanticWorker()
 buildPicker()
 renderWorkChips()
 renderCustomChips()

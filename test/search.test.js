@@ -82,3 +82,10 @@ test('canonical order sorts by verse id', () => {
   const ids = [...search(getIndex(), 'charity', { order: 'canonical' }).ids]
   assert.deepEqual(ids, [...ids].sort((a, b) => a - b))
 })
+
+test('highlights distinctive words, not filler', () => {
+  const { matched } = search(getIndex(), 'for those who mourn')
+  assert.ok(matched.has('mourn'))
+  assert.ok(!matched.has('for'))
+  assert.ok(search(getIndex(), 'and the').matched.has('and'))
+})

@@ -12,6 +12,8 @@ const DIST = join(ROOT, 'dist')
 const SW = join(DIST, 'sw.js')
 const VERSION_PLACEHOLDER = '__BUILD_VERSION__'
 const ASSETS_PLACEHOLDER = '__BUILD_ASSETS__'
+// Large files only meaning search uses; sw.js caches them on first use instead of precaching them.
+const CACHE_ON_USE = ['data/vectors.bin']
 
 const listFiles = async dir => (await readdir(dir, { recursive: true, withFileTypes: true }))
   .filter(entry => entry.isFile())
@@ -23,7 +25,10 @@ await cp(SRC, DIST, { recursive: true })
 const files = (await listFiles(DIST)).filter(file => file !== SW).sort()
 const hash = createHash('sha256')
 for (const file of files) hash.update(await readFile(file))
-const assets = files.map(file => `./${file.slice(DIST.length + 1).replaceAll('\\', '/')}`)
+const assets = files
+  .map(file => file.slice(DIST.length + 1).replaceAll('\\', '/'))
+  .filter(path => !CACHE_ON_USE.includes(path))
+  .map(path => `./${path}`)
 
 const sw = await readFile(SW, 'utf8')
 await writeFile(SW, sw
