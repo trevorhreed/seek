@@ -9,17 +9,17 @@ export const COLLECTIONS = [
     refs: [
       'Isaiah',
       '1 Nephi 20-21',
-      '2 Nephi 6:6-7', '2 Nephi 6:16-18', '2 Nephi 7-8', '2 Nephi 9:50-51', '2 Nephi 12-24', '2 Nephi 27',
-      '2 Nephi 30:9-15',
+      '2 Nephi 6:6-7', '2 Nephi 6:16-18', '2 Nephi 7-8', '2 Nephi 9:50-51', '2 Nephi 12-24',
+      '2 Nephi 27:2-5', '2 Nephi 27:15-19', '2 Nephi 27:25-35', '2 Nephi 30:9', '2 Nephi 30:11-15',
       'Mosiah 12:21-24', 'Mosiah 14', 'Mosiah 15:29-31',
-      '3 Nephi 16:18-20', '3 Nephi 20:32-45', '3 Nephi 21:8', '3 Nephi 21:29', '3 Nephi 22'
+      '3 Nephi 16:18-20', '3 Nephi 20:32', '3 Nephi 20:34-45', '3 Nephi 21:8', '3 Nephi 21:29', '3 Nephi 22'
     ]
   },
   {
     id: 'malachi',
     name: 'Malachi, wherever quoted',
     description: 'Malachi plus its quotations in 3 Nephi, the Doctrine and Covenants and Joseph Smith—History.',
-    refs: ['Malachi', '3 Nephi 24-25', 'D&C 2', 'D&C 128:17', 'Joseph Smith—History 1:36-39']
+    refs: ['Malachi', '3 Nephi 24-25', 'D&C 2', 'D&C 128:17', 'Joseph Smith—History 1:37-39']
   },
   {
     id: 'sermon-on-the-mount',
