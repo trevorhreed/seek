@@ -2,62 +2,115 @@
 <html lang="en-US">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Fast, offline-friendly search across the Old and New Testaments, Book of Mormon, Doctrine and Covenants and Pearl of Great Price.">
+    <meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#101214" media="(prefers-color-scheme: dark)">
     <title>Seek</title>
-    <link rel="stylesheet" href="styles.css" />
-    <script src="elasticlunr.min.js"></script>
-    <script src="scripts.js"></script>
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="app.js"></script>
   </head>
   <body>
-    <header>
-      <input type="search" class="search" placeholder="Search" />
-      <section class="works">
-        <div data-name="The Old Testament">The Old Testament</div>
-        <div data-name="The New Testament">The New Testament</div>
-        <div data-name="Book of Mormon">Book of Mormon</div>
-        <div data-name="Doctrine & Covenants">Doctrine & Covenants</div>
-        <div data-name="The Pearl of Great Price">Pearl of Great Price</div>
-      </section>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Seek home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><use href="#mark" /></svg>
+        <span>Seek</span>
+      </a>
+      <label class="searchbox">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input type="search" id="query" autocomplete="off" spellcheck="false" enterkeyhint="search"
+          placeholder="Search words, “a phrase”, or Alma 32:21" aria-label="Search the scriptures">
+        <kbd aria-hidden="true">/</kbd>
+      </label>
+      <button class="icon-button" id="theme" type="button" aria-label="Theme: match system" title="Theme: match system">
+        <svg class="theme-auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" /></svg>
+        <svg class="theme-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" /></svg>
+        <svg class="theme-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" /></svg>
+      </button>
     </header>
-    <main>
-      <section class="results">
-        <header>
-          <p class="status">No results.</p>
-        </header>
-        <div class="scroll-wrapper">
-          <div class="list"></div>
-          <div class="loading">
-            <div class="spinner"></div>
+
+    <nav class="scopebar" aria-label="Filter by volume">
+      <div class="chips" id="work-chips"></div>
+      <div class="chips" id="custom-chips"></div>
+      <button class="chip chip-add" id="open-picker" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        Books &amp; collections
+      </button>
+    </nav>
+
+    <main class="layout">
+      <section class="results" aria-labelledby="status">
+        <div class="results-head">
+          <p class="status" id="status" aria-live="polite"></p>
+          <div class="segmented" role="radiogroup" aria-label="Sort results" id="order">
+            <button type="button" role="radio" data-order="relevance" aria-checked="true">Best match</button>
+            <button type="button" role="radio" data-order="canonical" aria-checked="false">Canon order</button>
           </div>
         </div>
+        <ol class="result-list" id="results"></ol>
+        <div class="sentinel" id="sentinel"></div>
+        <div class="welcome" id="welcome">
+          <h1>Search the scriptures</h1>
+          <p class="examples-label">Try</p>
+          <div class="examples" id="examples">
+            <button type="button" class="example" data-query="faith hope charity">faith hope charity<small>words</small></button>
+            <button type="button" class="example" data-query="&quot;strait and narrow&quot;">“strait and narrow”<small>phrase</small></button>
+            <button type="button" class="example" data-query="peace -war">peace -war<small>exclude</small></button>
+            <button type="button" class="example" data-query="ne222">ne222<small>reference</small></button>
+            <button type="button" class="example" data-query="redeemer" data-scope="isaiah">redeemer<small>in Isaiah, wherever quoted</small></button>
+          </div>
+          <p class="keys"><kbd>/</kbd> search <kbd>↑</kbd><kbd>↓</kbd> move <kbd>Esc</kbd> close</p>
+        </div>
       </section>
-      <section class="chapter">
-        <header>
-          <h2></h2>
-          <span class="close-chapter"></span>
+
+      <aside class="reader" id="reader" aria-labelledby="reader-title" hidden>
+        <header class="reader-head">
+          <button class="icon-button" id="reader-prev" type="button" aria-label="Previous chapter">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+          </button>
+          <div class="reader-title">
+            <span class="eyebrow" id="reader-work"></span>
+            <h2 id="reader-title"></h2>
+          </div>
+          <button class="icon-button" id="reader-next" type="button" aria-label="Next chapter">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+          </button>
+          <a class="icon-button" id="reader-link" target="_blank" rel="noopener" aria-label="Open on churchofjesuschrist.org" title="Open on churchofjesuschrist.org">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+          </a>
+          <button class="icon-button" id="reader-close" type="button" aria-label="Close chapter">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
         </header>
-        <div class="verses"></div>
-      </section>
+        <div class="reader-body" id="reader-body"></div>
+      </aside>
     </main>
-    <template id="result">
-      <div class="result">
-        <h3><span></span></h3>
-        <p></p>
-        <a>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-            <path fill="none" d="M0,0H24V24H0Z" data-name="Path 3630" />
-            <path fill="#888" d="M11246.429,13555.538a4.9,4.9,0,0,1,0-6.919l3.661-3.66a4.874,4.874,0,0,1,7.658.961l-1.371,1.371a3.051,3.051,0,0,0-4.984-1.029l-3.66,3.662a3.047,3.047,0,0,0,4.31,4.309l1.288-1.285a6.785,6.785,0,0,0,2.088.332c.065,0,.129-.007.194-.009l-2.267,2.268a4.9,4.9,0,0,1-6.917,0Zm5.766-5.53a4.892,4.892,0,0,1-.742-.961l1.371-1.371a3.052,3.052,0,0,0,4.985,1.029l3.661-3.661a3.048,3.048,0,0,0-4.312-4.311l-1.285,1.287a6.741,6.741,0,0,0-2.09-.334c-.064,0-.129.008-.193.011l2.267-2.267a4.89,4.89,0,0,1,6.916,6.916l-3.661,3.661a4.9,4.9,0,0,1-6.917,0Z" data-name="Path 2639" transform="translate(-11242.6 -13535.6)" />
-          </svg>
-        </a>
-      </div>
-    </template>
-    <template id="verse">
-      <p>
-        <span class="num"></span>
-        <span class="text"></span>
-      </p>
-    </template>
+
+    <dialog class="picker" id="picker" aria-labelledby="picker-title">
+      <form method="dialog" class="picker-inner">
+        <header class="picker-head">
+          <h2 id="picker-title">Search within</h2>
+          <input type="search" id="picker-filter" placeholder="Filter books" autocomplete="off" aria-label="Filter books">
+          <button class="icon-button" value="close" aria-label="Done">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+        <div class="picker-body" id="picker-body"></div>
+        <footer class="picker-foot">
+          <button type="button" class="button-quiet" id="picker-clear">Clear all</button>
+          <button class="button" value="done">Done</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="mark" viewBox="0 0 32 32">
+        <circle cx="14" cy="14" r="9" fill="none" stroke="currentColor" stroke-width="3" />
+        <path d="m21 21 7 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+        <path d="M10 11.5h8M10 16h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+      </symbol>
+    </svg>
   </body>
 </html>
