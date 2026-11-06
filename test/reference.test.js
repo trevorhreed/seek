@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createReferenceFinder, createReferenceParser } from '../src/lib/reference.js'
 import { createScopes } from '../src/lib/scope.js'
+import { parseVerseList, toRanges } from '../src/lib/canon.js'
 import { canon } from './fixtures.js'
 
 const parse = createReferenceParser(canon)
@@ -55,6 +56,22 @@ test('study links point at the highlighted verses', () => {
   assert.equal(canon.studyUrl(alma, 32, 21), 'https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/32?lang=eng&id=p21#p21')
   assert.equal(canon.studyUrl(alma, 32, 21, 23), 'https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/32?lang=eng&id=p21-p23#p21')
   assert.equal(canon.studyUrl(alma, 32), 'https://www.churchofjesuschrist.org/study/scriptures/bofm/alma/32?lang=eng')
+})
+
+test('selections with gaps cite and link each run of verses', () => {
+  const john = canon.book('john')
+  assert.equal(canon.versesLabel(john, 3, [16]), 'John 3:16')
+  assert.equal(canon.versesLabel(john, 3, [20, 16, 18, 19]), 'John 3:16, 18–20')
+  assert.equal(canon.versesUrl(john, 3, [16, 18, 19, 20]),
+    'https://www.churchofjesuschrist.org/study/scriptures/nt/john/3?lang=eng&id=p16,p18-p20#p16')
+})
+
+test('verse lists round-trip through the URL form', () => {
+  assert.deepEqual(toRanges([5, 1, 2, 3, 3, 9]), [[1, 3], [5, 5], [9, 9]])
+  assert.deepEqual(parseVerseList('16,18-20', 36), [16, 18, 19, 20])
+  assert.deepEqual(parseVerseList('16-18', 36), [16, 17, 18])
+  assert.deepEqual(parseVerseList('35-40,0,x', 36), [35, 36])
+  assert.deepEqual(parseVerseList('', 36), [])
 })
 
 const find = createReferenceFinder(canon)

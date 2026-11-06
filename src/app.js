@@ -1,4 +1,4 @@
-import { createCanon } from './lib/canon.js'
+import { createCanon, formatVerseList, parseVerseList } from './lib/canon.js'
 import { CITE_FORMATS, cite } from './lib/cite.js'
 import { createReferenceFinder } from './lib/reference.js'
 import { createScopes } from './lib/scope.js'
@@ -217,13 +217,11 @@ const readUrl = () => {
   state.scope = new Set((params.get('in') ?? '').split(',').filter(scopes.isKey))
   state.order = params.get('sort') === 'canonical' ? 'canonical' : 'relevance'
   state.mode = params.get('mode') === 'meaning' ? 'meaning' : 'words'
-  // v=john.3.16 or a range, v=john.3.16-18
+  // v=john.3 for a chapter, plus selected verses: v=john.3.16 or v=john.3.16,18-20
   const [slug, chapter, verses = ''] = (params.get('v') ?? '').split('.')
-  const [verse, last] = verses.split('-').map(Number)
   const book = canon.book(slug)
-  if (book && canon.verseId(book, Number(chapter), verse || 1) >= 0) {
-    const lastValid = last > verse && canon.verseId(book, Number(chapter), last) >= 0
-    state.reader = { book, chapter: Number(chapter), verse: verse || null, last: lastValid ? last : verse || null }
+  if (book && canon.verseId(book, Number(chapter)) >= 0) {
+    state.reader = { book, chapter: Number(chapter), verses: parseVerseList(verses, book.chapters[chapter - 1]) }
   }
 }
 
@@ -234,8 +232,8 @@ const writeUrl = () => {
   if (state.order !== 'relevance') params.set('sort', state.order)
   if (state.mode !== 'words') params.set('mode', state.mode)
   if (state.reader) {
-    const { book, chapter, verse, last } = state.reader
-    params.set('v', [book.slug, chapter, last > verse ? `${verse}-${last}` : verse].filter(Boolean).join('.'))
+    const { book, chapter, verses } = state.reader
+    params.set('v', [book.slug, chapter, formatVerseList(verses)].filter(Boolean).join('.'))
   }
   const search = params.toString().replace(/%2C/g, ',')
   history.replaceState(null, '', search ? `?${search}` : location.pathname)
@@ -531,7 +529,7 @@ const showBrowse = () => {
         el('div', { className: 'passage-list' }, ...collection.ranges.map(([start, end]) => {
           const from = canon.locate(start)
           const button = el('button', { type: 'button', textContent: canon.rangeLabel(start, end) })
-          button.addEventListener('click', () => openReader(from.book, from.chapter, from.verse, end - 1))
+          button.addEventListener('click', () => openReader(from.book, from.chapter, versesFrom(start, end - 1)))
           return button
         })))]
     }
@@ -544,7 +542,14 @@ const showBrowse = () => {
 const openPassage = ({ start, end }) => {
   const from = canon.locate(start)
   const wholeChapter = from.verse === 1 && end === canon.chapterRange(from.book, from.chapter)[1]
-  openReader(from.book, from.chapter, wholeChapter ? null : from.verse, end - 1)
+  openReader(from.book, from.chapter, wholeChapter ? [] : versesFrom(start, end - 1))
+}
+
+// Verse numbers from verse id start through lastId, cut off at the end of start's chapter.
+const versesFrom = (start, lastId) => {
+  const { book, chapter, verse } = canon.locate(start)
+  const [, end] = canon.chapterRange(book, chapter)
+  return Array.from({ length: Math.min(lastId, end - 1) - start + 1 }, (_, i) => verse + i)
 }
 
 // One reference lists its verses; an ambiguous shortcut ("ne222") lists each passage it could mean.
@@ -592,11 +597,10 @@ new IntersectionObserver(entries => {
 
 // ---- Reader ------------------------------------------------------------------------------------------------
 
-const openReader = (book, chapter, verse = null, lastVerseId = null) => {
+// Opens a chapter with the given verse numbers selected (none: open at the top).
+const openReader = (book, chapter, selected = []) => {
   const [start, end] = canon.chapterRange(book, chapter)
-  const first = verse ? start + verse - 1 : null
-  const last = lastVerseId !== null ? Math.min(lastVerseId, end - 1) : first
-  selectionAnchor = first
+  const first = selected.length ? start + Math.min(...selected) - 1 : null
 
   ui.readerWork.textContent = book.work.name
   ui.readerTitle.textContent = book.chapters.length > 1 || book.slug === 'dc' ? `${book.name} ${chapter}` : book.name
@@ -612,7 +616,7 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
     verses.push(p)
   }
   ui.readerBody.replaceChildren(...verses)
-  selectVerses(book, chapter, first, last)
+  selectVerses(book, chapter, selected)
 
   const chapterIndex = book.firstChapter + chapter - 1
   ui.readerPrev.disabled = chapterIndex === 0
@@ -631,57 +635,57 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
   if (first !== null) ui.results.querySelector(`.result[data-id="${first}"]`)?.classList.add('active')
 }
 
-// Marks verse ids first..last (or nothing, when first is null) in the open chapter as the selection to cite.
-const selectVerses = (book, chapter, first, last = first) => {
+// Marks the given verse numbers of the open chapter as the selection to cite. state.reader.id is the first
+// selected verse's id (or null), which related verses and the active result follow.
+const selectVerses = (book, chapter, selected) => {
   const [start] = canon.chapterRange(book, chapter)
-  const verse = first === null ? null : first - start + 1
-  const lastVerse = first === null ? null : last - start + 1
+  const verses = [...new Set(selected)].sort((a, b) => a - b)
+  const first = verses.length ? start + verses[0] - 1 : null
   const changedFirst = state.reader?.id !== first
-  state.reader = { book, chapter, verse, last: lastVerse, id: first, lastId: first === null ? null : last }
+  state.reader = { book, chapter, verses, id: first }
   ui.readerBody.querySelectorAll('.verse').forEach(p => {
-    const id = Number(p.dataset.id)
-    p.classList.toggle('selected', first !== null && id >= first && id <= last)
+    p.classList.toggle('selected', verses.includes(Number(p.dataset.id) - start + 1))
   })
-  ui.readerLink.href = canon.studyUrl(book, chapter, verse, lastVerse)
+  ui.readerLink.href = verses.length ? canon.versesUrl(book, chapter, verses) : canon.studyUrl(book, chapter)
   renderCite()
   if (first === null) ui.related.hidden = true
   else if (changedFirst || ui.related.hidden) showRelated(first)
   writeUrl()
 }
 
-// Clicking a verse selects it and shows what it relates to; ⌘/Ctrl-clicking selects whole verses from the last
-// plain-clicked one to it. Shift-click would be the convention, but the browser spends it extending text selection.
-let selectionAnchor = null
+// Clicking a verse selects just it and shows what it relates to; ⌘/Ctrl-clicking adds or removes one verse,
+// like multi-select in a file list.
 ui.readerBody.addEventListener('click', event => {
   const verse = event.target.closest('.verse')
   if (!verse || !state.reader || getSelection().toString()) return
-  const id = Number(verse.dataset.id)
-  const { book, chapter } = state.reader
-  if ((event.metaKey || event.ctrlKey) && selectionAnchor !== null && state.reader.id !== null) {
-    selectVerses(book, chapter, Math.min(selectionAnchor, id), Math.max(selectionAnchor, id))
-  } else {
-    selectionAnchor = id
-    selectVerses(book, chapter, id)
-  }
+  const { book, chapter, verses } = state.reader
+  const number = Number(verse.id.slice(1))
+  if (event.metaKey || event.ctrlKey) {
+    selectVerses(book, chapter, verses.includes(number) ? verses.filter(n => n !== number) : [...verses, number])
+  } else selectVerses(book, chapter, [number])
 })
 
 // ---- Citing ------------------------------------------------------------------------------------------------
 
+const GAP = '…'
+
+// Skipped verses become an ellipsis in the quoted text.
 const selectedPassage = () => {
-  const { book, chapter, verse, last, id, lastId } = state.reader
+  const { book, chapter, verses } = state.reader
+  const [start] = canon.chapterRange(book, chapter)
   return {
-    reference: canon.rangeLabel(id, lastId + 1),
-    url: canon.studyUrl(book, chapter, verse, last),
-    texts: data.text.slice(id, lastId + 1)
+    reference: canon.versesLabel(book, chapter, verses),
+    url: canon.versesUrl(book, chapter, verses),
+    texts: verses.flatMap((n, i) => i && n > verses[i - 1] + 1 ? [GAP, data.text[start + n - 1]] : [data.text[start + n - 1]])
   }
 }
 
 const renderCite = () => {
-  const { id, lastId, book, chapter } = state.reader ?? {}
-  ui.cite.hidden = id === null || id === undefined
+  const { book, chapter, verses = [] } = state.reader ?? {}
+  ui.cite.hidden = !verses.length
   closeCiteMenu()
   if (ui.cite.hidden) return
-  ui.citeRef.textContent = canon.rangeLabel(id, lastId + 1)
+  ui.citeRef.textContent = canon.versesLabel(book, chapter, verses)
 }
 
 // Rich editors take the HTML so the reference stays a link; everything else gets the plain text.
@@ -739,7 +743,7 @@ ui.citeMenu.addEventListener('keydown', event => {
 })
 
 ui.citeCopy.addEventListener('click', () => (ui.citeMenu.hidden ? openCiteMenu() : closeCiteMenu()))
-ui.citeHint.textContent = `${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}-click to select more`
+ui.citeHint.textContent = `${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}-click to add verses`
 document.addEventListener('pointerdown', event => {
   if (!ui.citeMenu.hidden && !event.target.closest('.cite-copy-wrap')) closeCiteMenu()
 })
@@ -907,8 +911,8 @@ renderWorkChips()
 renderCustomChips()
 runSearch()
 if (state.reader) {
-  const { book, chapter, verse, last } = state.reader
-  openReader(book, chapter, verse, verse && canon.verseId(book, chapter, last))
+  const { book, chapter, verses } = state.reader
+  openReader(book, chapter, verses)
 }
 if (!state.reader) ui.query.focus()
 
