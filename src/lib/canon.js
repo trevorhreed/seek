@@ -3,6 +3,32 @@
 
 const STUDY_URL = 'https://www.churchofjesuschrist.org/study/scriptures'
 
+// Groups verse numbers into sorted runs: [5, 1, 2, 3] -> [[1, 3], [5, 5]]
+export const toRanges = numbers => {
+  const ranges = []
+  for (const n of [...new Set(numbers)].sort((a, b) => a - b)) {
+    const last = ranges.at(-1)
+    if (last && n === last[1] + 1) last[1] = n
+    else ranges.push([n, n])
+  }
+  return ranges
+}
+
+const formatRanges = (numbers, { dash = '-', prefix = '', separator = ',' } = {}) => toRanges(numbers)
+  .map(([from, to]) => from === to ? `${prefix}${from}` : `${prefix}${from}${dash}${prefix}${to}`)
+  .join(separator)
+
+// The URL form of a selection, "16,18-20" (also "16-20" or "16"), as verse numbers 1..max.
+export const parseVerseList = (text, max) => text.split(',').flatMap(part => {
+  const [from, to = from] = part.split('-').map(Number)
+  if (!(from >= 1)) return []
+  const numbers = []
+  for (let n = from; n <= Math.min(to, max); n++) numbers.push(n)
+  return numbers
+})
+
+export const formatVerseList = numbers => formatRanges(numbers)
+
 export const createCanon = ({ works }) => {
   const books = []
   const chapterStarts = []
@@ -92,6 +118,16 @@ export const createCanon = ({ works }) => {
     return `${base}&id=${id}#p${verse}`
   }
 
+  // "John 3:16, 18–20" for verse numbers [16, 18, 19, 20] of one chapter.
+  const versesLabel = (book, chapter, numbers) =>
+    `${book.name} ${chapter}:${formatRanges(numbers, { dash: '–', separator: ', ' })}`
+
+  // Like studyUrl, but highlights each run of verses: …/john/3?lang=eng&id=p16,p18-p20#p16
+  const versesUrl = (book, chapter, numbers) => {
+    const [[first]] = toRanges(numbers)
+    return `${STUDY_URL}/${book.work.id}/${book.slug}/${chapter}?lang=eng&id=${formatRanges(numbers, { prefix: 'p' })}#p${first}`
+  }
+
   const bySlug = new Map(books.map(book => [book.slug, book]))
   const workById = new Map(workList.map(work => [work.id, work]))
 
@@ -105,6 +141,8 @@ export const createCanon = ({ works }) => {
     label,
     rangeLabel,
     studyUrl,
+    versesLabel,
+    versesUrl,
     book: slug => bySlug.get(slug),
     work: id => workById.get(id)
   }
