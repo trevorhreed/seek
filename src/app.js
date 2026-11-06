@@ -1,4 +1,5 @@
 import { createCanon } from './lib/canon.js'
+import { CITE_FORMATS, cite } from './lib/cite.js'
 import { createReferenceFinder } from './lib/reference.js'
 import { createScopes } from './lib/scope.js'
 import { forEachWord, stem } from './lib/search.js'
@@ -15,6 +16,7 @@ const SEARCH_DEBOUNCE_MS = 120
 const THEME_KEY = 'seek:theme'
 const THEMES = ['auto', 'light', 'dark']
 const THEME_LABELS = { auto: 'match system', light: 'light', dark: 'dark' }
+const COPY_FEEDBACK_MS = 1500
 
 const $ = id => document.getElementById(id)
 const el = (tag, props = {}, ...children) => {
@@ -51,6 +53,12 @@ const ui = {
   readerNext: $('reader-next'),
   readerLink: $('reader-link'),
   readerClose: $('reader-close'),
+  cite: $('cite'),
+  citeRef: $('cite-ref'),
+  citeBefore: $('cite-before'),
+  citeAfter: $('cite-after'),
+  citeCopy: $('cite-copy'),
+  citeMenu: $('cite-menu'),
   theme: $('theme')
 }
 
@@ -210,10 +218,13 @@ const readUrl = () => {
   state.scope = new Set((params.get('in') ?? '').split(',').filter(scopes.isKey))
   state.order = params.get('sort') === 'canonical' ? 'canonical' : 'relevance'
   state.mode = params.get('mode') === 'meaning' ? 'meaning' : 'words'
-  const [slug, chapter, verse] = (params.get('v') ?? '').split('.')
+  // v=john.3.16 or a range, v=john.3.16-18
+  const [slug, chapter, verses = ''] = (params.get('v') ?? '').split('.')
+  const [verse, last] = verses.split('-').map(Number)
   const book = canon.book(slug)
-  if (book && canon.verseId(book, Number(chapter), Number(verse) || 1) >= 0) {
-    state.reader = { book, chapter: Number(chapter), verse: Number(verse) || null }
+  if (book && canon.verseId(book, Number(chapter), verse || 1) >= 0) {
+    const lastValid = last > verse && canon.verseId(book, Number(chapter), last) >= 0
+    state.reader = { book, chapter: Number(chapter), verse: verse || null, last: lastValid ? last : verse || null }
   }
 }
 
@@ -224,8 +235,8 @@ const writeUrl = () => {
   if (state.order !== 'relevance') params.set('sort', state.order)
   if (state.mode !== 'words') params.set('mode', state.mode)
   if (state.reader) {
-    const { book, chapter, verse } = state.reader
-    params.set('v', [book.slug, chapter, verse].filter(Boolean).join('.'))
+    const { book, chapter, verse, last } = state.reader
+    params.set('v', [book.slug, chapter, last > verse ? `${verse}-${last}` : verse].filter(Boolean).join('.'))
   }
   const search = params.toString().replace(/%2C/g, ',')
   history.replaceState(null, '', search ? `?${search}` : location.pathname)
@@ -586,17 +597,15 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
   const [start, end] = canon.chapterRange(book, chapter)
   const first = verse ? start + verse - 1 : null
   const last = lastVerseId !== null ? Math.min(lastVerseId, end - 1) : first
-  state.reader = { book, chapter, verse, id: first }
+  selectionAnchor = first
 
   ui.readerWork.textContent = book.work.name
   ui.readerTitle.textContent = book.chapters.length > 1 || book.slug === 'dc' ? `${book.name} ${chapter}` : book.name
   ui.reader.dataset.work = book.work.id
-  ui.readerLink.href = canon.studyUrl(book, chapter, verse, last === null ? null : last - start + 1)
 
   const verses = []
   for (let id = start; id < end; id++) {
-    const selected = first !== null && id >= first && id <= last
-    const p = el('p', { className: selected ? 'verse selected' : 'verse', id: `v${id - start + 1}` },
+    const p = el('p', { className: 'verse', id: `v${id - start + 1}` },
       el('span', { className: 'verse-num', textContent: id - start + 1 }),
       ' ',
       el('span', { className: 'verse-text' }, highlight(data.text[id], state.matched)))
@@ -604,6 +613,7 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
     verses.push(p)
   }
   ui.readerBody.replaceChildren(...verses)
+  selectVerses(book, chapter, first, last)
 
   const chapterIndex = book.firstChapter + chapter - 1
   ui.readerPrev.disabled = chapterIndex === 0
@@ -620,23 +630,131 @@ const openReader = (book, chapter, verse = null, lastVerseId = null) => {
   })
   ui.results.querySelectorAll('.result.active').forEach(item => item.classList.remove('active'))
   if (first !== null) ui.results.querySelector(`.result[data-id="${first}"]`)?.classList.add('active')
-  if (first !== null) showRelated(first)
-  else ui.related.hidden = true
+}
+
+// Marks verse ids first..last (or nothing, when first is null) in the open chapter as the selection to cite.
+const selectVerses = (book, chapter, first, last = first) => {
+  const [start] = canon.chapterRange(book, chapter)
+  const verse = first === null ? null : first - start + 1
+  const lastVerse = first === null ? null : last - start + 1
+  const changedFirst = state.reader?.id !== first
+  state.reader = { book, chapter, verse, last: lastVerse, id: first, lastId: first === null ? null : last }
+  ui.readerBody.querySelectorAll('.verse').forEach(p => {
+    const id = Number(p.dataset.id)
+    p.classList.toggle('selected', first !== null && id >= first && id <= last)
+  })
+  ui.readerLink.href = canon.studyUrl(book, chapter, verse, lastVerse)
+  renderCite()
+  if (first === null) ui.related.hidden = true
+  else if (changedFirst || ui.related.hidden) showRelated(first)
   writeUrl()
 }
 
-// Clicking a verse in the reader selects it and shows what it relates to.
+// Clicking a verse selects it and shows what it relates to; shift-clicking extends the selection to it.
+let selectionAnchor = null
 ui.readerBody.addEventListener('click', event => {
   const verse = event.target.closest('.verse')
   if (!verse || !state.reader || getSelection().toString()) return
   const id = Number(verse.dataset.id)
-  ui.readerBody.querySelectorAll('.verse.selected').forEach(other => other.classList.remove('selected'))
-  verse.classList.add('selected')
-  const { book, chapter, verse: number } = canon.locate(id)
-  state.reader = { book, chapter, verse: number, id }
-  ui.readerLink.href = canon.studyUrl(book, chapter, number)
-  writeUrl()
-  showRelated(id)
+  const { book, chapter } = state.reader
+  if (event.shiftKey && selectionAnchor !== null && state.reader.id !== null) {
+    selectVerses(book, chapter, Math.min(selectionAnchor, id), Math.max(selectionAnchor, id))
+  } else {
+    selectionAnchor = id
+    selectVerses(book, chapter, id)
+  }
+})
+
+// ---- Citing ------------------------------------------------------------------------------------------------
+
+const selectedPassage = () => {
+  const { book, chapter, verse, last, id, lastId } = state.reader
+  return {
+    reference: canon.rangeLabel(id, lastId + 1),
+    url: canon.studyUrl(book, chapter, verse, last),
+    texts: data.text.slice(id, lastId + 1)
+  }
+}
+
+const renderCite = () => {
+  const { id, lastId, book, chapter } = state.reader ?? {}
+  ui.cite.hidden = id === null || id === undefined
+  closeCiteMenu()
+  if (ui.cite.hidden) return
+  const [start, end] = canon.chapterRange(book, chapter)
+  ui.citeRef.textContent = canon.rangeLabel(id, lastId + 1)
+  ui.citeBefore.disabled = id === start
+  ui.citeAfter.disabled = lastId === end - 1
+}
+
+const extendSelection = delta => {
+  const { book, chapter, id, lastId } = state.reader
+  const [start, end] = canon.chapterRange(book, chapter)
+  const first = Math.max(start, id + Math.min(delta, 0))
+  const last = Math.min(end - 1, lastId + Math.max(delta, 0))
+  selectVerses(book, chapter, first, last)
+  ui.readerBody.querySelector(`.verse[data-id="${delta < 0 ? first : last}"]`)?.scrollIntoView({ block: 'nearest' })
+}
+
+// Rich editors take the HTML so the reference stays a link; everything else gets the plain text.
+const writeClipboard = ({ text, html }) => html && window.ClipboardItem
+  ? navigator.clipboard.write([new ClipboardItem({
+    'text/plain': new Blob([text], { type: 'text/plain' }),
+    'text/html': new Blob([html], { type: 'text/html' })
+  })])
+  : navigator.clipboard.writeText(text)
+
+let copyFeedbackTimer
+const showCopyFeedback = message => {
+  clearTimeout(copyFeedbackTimer)
+  ui.citeCopy.dataset.feedback = message
+  copyFeedbackTimer = setTimeout(() => delete ui.citeCopy.dataset.feedback, COPY_FEEDBACK_MS)
+}
+
+const openCiteMenu = () => {
+  ui.citeMenu.hidden = false
+  ui.citeCopy.setAttribute('aria-expanded', 'true')
+  ui.citeMenu.querySelector('[role="menuitem"]').focus()
+}
+
+const closeCiteMenu = () => {
+  ui.citeMenu.hidden = true
+  ui.citeCopy.setAttribute('aria-expanded', 'false')
+}
+
+ui.citeMenu.replaceChildren(...CITE_FORMATS.map(format => {
+  const item = el('button', { type: 'button', role: 'menuitem', textContent: format.label })
+  item.dataset.format = format.id
+  return item
+}))
+
+ui.citeMenu.addEventListener('click', async event => {
+  const item = event.target.closest('[data-format]')
+  if (!item) return
+  closeCiteMenu()
+  ui.citeCopy.focus()
+  try {
+    await writeClipboard(cite(selectedPassage(), item.dataset.format))
+    showCopyFeedback('Copied')
+  } catch {
+    showCopyFeedback('Couldn’t copy')
+  }
+})
+
+ui.citeMenu.addEventListener('keydown', event => {
+  const items = [...ui.citeMenu.querySelectorAll('[role="menuitem"]')]
+  const index = items.indexOf(document.activeElement)
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    items[(index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus()
+  }
+})
+
+ui.citeCopy.addEventListener('click', () => (ui.citeMenu.hidden ? openCiteMenu() : closeCiteMenu()))
+ui.citeBefore.addEventListener('click', () => extendSelection(-1))
+ui.citeAfter.addEventListener('click', () => extendSelection(1))
+document.addEventListener('pointerdown', event => {
+  if (!ui.citeMenu.hidden && !event.target.closest('.cite-copy-wrap')) closeCiteMenu()
 })
 
 // Re-marks the open chapter for a new query without moving its scroll position.
@@ -739,6 +857,13 @@ document.addEventListener('keydown', event => {
     return
   }
 
+  if (key === 'Escape' && !ui.citeMenu.hidden) {
+    // Close just the copy menu, not the whole reader.
+    closeCiteMenu()
+    ui.citeCopy.focus()
+    return
+  }
+
   if (key === 'Escape') {
     if (state.reader) closeReader()
     else if (ui.query.value) {
@@ -795,8 +920,8 @@ renderWorkChips()
 renderCustomChips()
 runSearch()
 if (state.reader) {
-  const { book, chapter, verse } = state.reader
-  openReader(book, chapter, verse)
+  const { book, chapter, verse, last } = state.reader
+  openReader(book, chapter, verse, verse && canon.verseId(book, chapter, last))
 }
 if (!state.reader) ui.query.focus()
 

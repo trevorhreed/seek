@@ -537,6 +537,70 @@ body.has-query .welcome { display: none; }
 
 .verse { cursor: pointer; }
 
+/* The cite bar sits under the chapter whenever verses are selected. */
+.cite {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px 8px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.cite[hidden] { display: none; }
+.cite-ref {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 4px;
+  font-weight: 650;
+  font-size: .9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cite-copy-wrap { position: relative; margin-left: 4px; }
+.cite-copy {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cite-copy svg { width: 16px; height: 16px; }
+/* Feedback replaces the label in place so the button doesn't change width. */
+.cite-copy[data-feedback] .cite-copy-label { visibility: hidden; }
+.cite-copy[data-feedback]::after {
+  content: attr(data-feedback);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  white-space: nowrap;
+}
+.cite-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 5;
+  display: grid;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.cite-menu[hidden] { display: none; }
+.cite-menu button {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: .9rem;
+  text-align: left;
+}
+.cite-menu button:hover, .cite-menu button:focus-visible { background: var(--surface-2); outline: none; }
+
 .related {
   flex: none;
   display: flex;
