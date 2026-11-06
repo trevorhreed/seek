@@ -55,8 +55,7 @@ const ui = {
   readerClose: $('reader-close'),
   cite: $('cite'),
   citeRef: $('cite-ref'),
-  citeBefore: $('cite-before'),
-  citeAfter: $('cite-after'),
+  citeHint: $('cite-hint'),
   citeCopy: $('cite-copy'),
   citeMenu: $('cite-menu'),
   theme: $('theme')
@@ -650,14 +649,15 @@ const selectVerses = (book, chapter, first, last = first) => {
   writeUrl()
 }
 
-// Clicking a verse selects it and shows what it relates to; shift-clicking extends the selection to it.
+// Clicking a verse selects it and shows what it relates to; ⌘/Ctrl-clicking selects whole verses from the last
+// plain-clicked one to it. Shift-click would be the convention, but the browser spends it extending text selection.
 let selectionAnchor = null
 ui.readerBody.addEventListener('click', event => {
   const verse = event.target.closest('.verse')
   if (!verse || !state.reader || getSelection().toString()) return
   const id = Number(verse.dataset.id)
   const { book, chapter } = state.reader
-  if (event.shiftKey && selectionAnchor !== null && state.reader.id !== null) {
+  if ((event.metaKey || event.ctrlKey) && selectionAnchor !== null && state.reader.id !== null) {
     selectVerses(book, chapter, Math.min(selectionAnchor, id), Math.max(selectionAnchor, id))
   } else {
     selectionAnchor = id
@@ -681,19 +681,7 @@ const renderCite = () => {
   ui.cite.hidden = id === null || id === undefined
   closeCiteMenu()
   if (ui.cite.hidden) return
-  const [start, end] = canon.chapterRange(book, chapter)
   ui.citeRef.textContent = canon.rangeLabel(id, lastId + 1)
-  ui.citeBefore.disabled = id === start
-  ui.citeAfter.disabled = lastId === end - 1
-}
-
-const extendSelection = delta => {
-  const { book, chapter, id, lastId } = state.reader
-  const [start, end] = canon.chapterRange(book, chapter)
-  const first = Math.max(start, id + Math.min(delta, 0))
-  const last = Math.min(end - 1, lastId + Math.max(delta, 0))
-  selectVerses(book, chapter, first, last)
-  ui.readerBody.querySelector(`.verse[data-id="${delta < 0 ? first : last}"]`)?.scrollIntoView({ block: 'nearest' })
 }
 
 // Rich editors take the HTML so the reference stays a link; everything else gets the plain text.
@@ -751,8 +739,7 @@ ui.citeMenu.addEventListener('keydown', event => {
 })
 
 ui.citeCopy.addEventListener('click', () => (ui.citeMenu.hidden ? openCiteMenu() : closeCiteMenu()))
-ui.citeBefore.addEventListener('click', () => extendSelection(-1))
-ui.citeAfter.addEventListener('click', () => extendSelection(1))
+ui.citeHint.textContent = `${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}-click to select more`
 document.addEventListener('pointerdown', event => {
   if (!ui.citeMenu.hidden && !event.target.closest('.cite-copy-wrap')) closeCiteMenu()
 })

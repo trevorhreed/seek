@@ -558,7 +558,9 @@ body.has-query .welcome { display: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cite-copy-wrap { position: relative; margin-left: 4px; }
+.cite-hint { color: var(--ink-3); font-size: .8rem; white-space: nowrap; }
+@media (hover: none) { .cite-hint { display: none; } }
+.cite-copy-wrap { position: relative; margin-left: 8px; }
 .cite-copy {
   position: relative;
   display: inline-flex;
